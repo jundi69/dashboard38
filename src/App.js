@@ -64,6 +64,73 @@ export default function App() {
   const [minerData, setMinerData] = useState(null);
   const [allReduceOperations, setAllReduceOperations] = useState([]);
 
+  // Helper functions to generate fallback data if API fails
+  const generateDummyData = useCallback((
+    hours = 24,
+    baseValue = 0,
+    variance = 1,
+    decreasing = false
+  ) => {
+    const now = new Date();
+    return Array.from({ length: hours }, (_, i) => {
+      const time = new Date(now.getTime() - (hours - i) * 3600000).toISOString();
+      let value;
+      if (decreasing) {
+        value =
+          baseValue + variance * Math.cos(i / 5) - (i / hours) * variance * 3;
+      } else {
+        value =
+          baseValue + variance * Math.sin(i / 5) + (i / hours) * variance * 0.5;
+      }
+      return { time, value: Math.max(0, value) };
+    });
+  }, []);
+  
+  const generateDummyMinerData = useCallback((uid) => {
+    return {
+      metagraph: {
+        stake: parseFloat((Math.random() * 100).toFixed(2)),
+        trust: parseFloat((Math.random() * 1).toFixed(3)),
+        consensus: parseFloat((Math.random() * 1).toFixed(3)),
+        incentive: parseFloat((Math.random() * 1).toFixed(3)),
+        emissions: parseFloat((Math.random() * 10).toFixed(2)),
+      },
+      training: {
+        loss: generateDummyData(24, 3.2, 0.8, true),
+        inner_step: generateDummyData(24, 50, 20),
+        samples_accumulated: generateDummyData(24, 500, 100),
+      },
+      resources: {
+        cpu_percent: generateDummyData(24, 60, 15),
+        memory_percent: generateDummyData(24, 45, 10),
+        gpu_utilization: generateDummyData(24, 85, 15),
+      },
+      scores: Array.from({ length: 5 }, (_, i) => ({
+        validator_uid: i,
+        train_score: parseFloat((Math.random() * 0.8 + 0.2).toFixed(4)),
+        all_reduce_score: parseFloat((Math.random() * 0.8 + 0.2).toFixed(4)),
+        total_score: parseFloat((Math.random() * 0.8 + 0.2).toFixed(4)),
+      })),
+    };
+  }, [generateDummyData]);
+  
+  const generateDummyAllReduceOperations = useCallback(() => {
+    return Array.from({ length: 10 }, (_, i) => {
+      const time = new Date(Date.now() - i * 3600000 * 4).toISOString();
+      return {
+        operation_id: `op-${i}`,
+        epoch: 10 - i,
+        time,
+        metrics: {
+          duration: parseFloat((Math.random() * 20 + 10).toFixed(2)),
+          participating_miners: Math.floor(Math.random() * 15 + 10),
+          success_rate: parseFloat((Math.random() * 0.3 + 0.7).toFixed(2)),
+          bandwidth: parseFloat((Math.random() * 10 + 20).toFixed(2)),
+        }
+      };
+    });
+  }, []);
+
   // Fetch global metrics
   useEffect(() => {
     if (activeTab === "global") {
@@ -190,73 +257,6 @@ export default function App() {
   const currentEpoch = globalData.epochs.length > 0 
     ? Math.max(...globalData.epochs.map(d => d.value))
     : "0";
-  
-  // Helper functions to generate fallback data if API fails
-  const generateDummyData = useCallback((
-    hours = 24,
-    baseValue = 0,
-    variance = 1,
-    decreasing = false
-  ) => {
-    const now = new Date();
-    return Array.from({ length: hours }, (_, i) => {
-      const time = new Date(now.getTime() - (hours - i) * 3600000).toISOString();
-      let value;
-      if (decreasing) {
-        value =
-          baseValue + variance * Math.cos(i / 5) - (i / hours) * variance * 3;
-      } else {
-        value =
-          baseValue + variance * Math.sin(i / 5) + (i / hours) * variance * 0.5;
-      }
-      return { time, value: Math.max(0, value) };
-    });
-  }, []);
-  
-  const generateDummyMinerData = useCallback((uid) => {
-    return {
-      metagraph: {
-        stake: parseFloat((Math.random() * 100).toFixed(2)),
-        trust: parseFloat((Math.random() * 1).toFixed(3)),
-        consensus: parseFloat((Math.random() * 1).toFixed(3)),
-        incentive: parseFloat((Math.random() * 1).toFixed(3)),
-        emissions: parseFloat((Math.random() * 10).toFixed(2)),
-      },
-      training: {
-        loss: generateDummyData(24, 3.2, 0.8, true),
-        inner_step: generateDummyData(24, 50, 20),
-        samples_accumulated: generateDummyData(24, 500, 100),
-      },
-      resources: {
-        cpu_percent: generateDummyData(24, 60, 15),
-        memory_percent: generateDummyData(24, 45, 10),
-        gpu_utilization: generateDummyData(24, 85, 15),
-      },
-      scores: Array.from({ length: 5 }, (_, i) => ({
-        validator_uid: i,
-        train_score: parseFloat((Math.random() * 0.8 + 0.2).toFixed(4)),
-        all_reduce_score: parseFloat((Math.random() * 0.8 + 0.2).toFixed(4)),
-        total_score: parseFloat((Math.random() * 0.8 + 0.2).toFixed(4)),
-      })),
-    };
-  }, [generateDummyData]);
-  
-  const generateDummyAllReduceOperations = useCallback(() => {
-    return Array.from({ length: 10 }, (_, i) => {
-      const time = new Date(Date.now() - i * 3600000 * 4).toISOString();
-      return {
-        operation_id: `op-${i}`,
-        epoch: 10 - i,
-        time,
-        metrics: {
-          duration: parseFloat((Math.random() * 20 + 10).toFixed(2)),
-          participating_miners: Math.floor(Math.random() * 15 + 10),
-          success_rate: parseFloat((Math.random() * 0.3 + 0.7).toFixed(2)),
-          bandwidth: parseFloat((Math.random() * 10 + 20).toFixed(2)),
-        }
-      };
-    });
-  }, []);
 
   return (
     <div className="App">
