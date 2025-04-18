@@ -1,5 +1,5 @@
 // src/App.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   LineChart,
   Line,
@@ -16,7 +16,7 @@ import "./styles.css";
 import axios from "axios";
 
 // API base URL - change this to your FastAPI server URL
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = process.env.FASTAPI_URL || "http://localhost:8000";
 
 // Format time helper
 const formatTime = (timeStr) => {
@@ -69,33 +69,33 @@ export default function App() {
     if (activeTab === "global") {
       fetchGlobalMetrics();
     }
-  }, [activeTab]);
+  }, [activeTab, fetchGlobalMetrics]);
 
   // Fetch miners list
   useEffect(() => {
     if (activeTab === "miners") {
       fetchMiners();
     }
-  }, [activeTab]);
+  }, [activeTab, fetchMiners]);
 
   // Fetch allreduce operations
   useEffect(() => {
     if (activeTab === "allreduce") {
       fetchAllReduceOperations();
     }
-  }, [activeTab]);
+  }, [activeTab, fetchAllReduceOperations]);
 
   // Fetch miner data when selected
   useEffect(() => {
     if (selectedMiner) {
       fetchMinerData(selectedMiner);
     }
-  }, [selectedMiner]);
+  }, [selectedMiner, fetchMinerData]);
 
-  const fetchGlobalMetrics = async () => {
+  const fetchGlobalMetrics = useCallback(async () => {
     setLoading({ ...loading, global: true });
     setError({ ...error, global: null });
-
+  
     try {
       const response = await axios.get(`${API_BASE_URL}/metrics/global`);
       setGlobalData(response.data);
@@ -115,12 +115,12 @@ export default function App() {
     } finally {
       setLoading({ ...loading, global: false });
     }
-  };
+  }, [loading, error, generateDummyData]);
 
-  const fetchMiners = async () => {
+  const fetchMiners = useCallback(async () => {
     setLoading({ ...loading, miners: true });
     setError({ ...error, miners: null });
-
+  
     try {
       const response = await axios.get(`${API_BASE_URL}/metrics/miners`);
       setMiners(response.data.map(uid => ({
@@ -139,12 +139,12 @@ export default function App() {
     } finally {
       setLoading({ ...loading, miners: false });
     }
-  };
+  }, [loading, error]);
 
-  const fetchMinerData = async (uid) => {
+  const fetchMinerData = useCallback(async (uid) => {
     setLoading({ ...loading, minerData: true });
     setError({ ...error, minerData: null });
-
+  
     try {
       const response = await axios.get(`${API_BASE_URL}/metrics/miner/${uid}`);
       setMinerData(response.data);
@@ -157,12 +157,12 @@ export default function App() {
     } finally {
       setLoading({ ...loading, minerData: false });
     }
-  };
+  }, [loading, error, generateDummyMinerData]);
 
-  const fetchAllReduceOperations = async () => {
+  const fetchAllReduceOperations = useCallback(async () => {
     setLoading({ ...loading, allreduce: true });
     setError({ ...error, allreduce: null });
-
+  
     try {
       const response = await axios.get(`${API_BASE_URL}/metrics/allreduce`);
       setAllReduceOperations(response.data);
@@ -175,7 +175,7 @@ export default function App() {
     } finally {
       setLoading({ ...loading, allreduce: false });
     }
-  };
+  }, [loading, error, generateDummyAllReduceOperations]);
 
   const handleMinerSelect = (uid) => {
     setSelectedMiner(uid);
@@ -192,7 +192,7 @@ export default function App() {
     : "0";
   
   // Helper functions to generate fallback data if API fails
-  const generateDummyData = (
+  const generateDummyData = useCallback((
     hours = 24,
     baseValue = 0,
     variance = 1,
@@ -211,9 +211,9 @@ export default function App() {
       }
       return { time, value: Math.max(0, value) };
     });
-  };
-
-  const generateDummyMinerData = (uid) => {
+  }, []);
+  
+  const generateDummyMinerData = useCallback((uid) => {
     return {
       metagraph: {
         stake: parseFloat((Math.random() * 100).toFixed(2)),
@@ -239,9 +239,9 @@ export default function App() {
         total_score: parseFloat((Math.random() * 0.8 + 0.2).toFixed(4)),
       })),
     };
-  };
-
-  const generateDummyAllReduceOperations = () => {
+  }, [generateDummyData]);
+  
+  const generateDummyAllReduceOperations = useCallback(() => {
     return Array.from({ length: 10 }, (_, i) => {
       const time = new Date(Date.now() - i * 3600000 * 4).toISOString();
       return {
@@ -256,7 +256,7 @@ export default function App() {
         }
       };
     });
-  };
+  }, []);
 
   return (
     <div className="App">
