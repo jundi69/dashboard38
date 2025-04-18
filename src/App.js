@@ -15,7 +15,6 @@ import {
 import "./styles.css";
 import axios from "axios";
 
-// API base URL - change this to your FastAPI server URL
 const API_BASE_URL = process.env.FASTAPI_URL || "http://localhost:8000";
 
 // Format time helper
@@ -64,130 +63,35 @@ export default function App() {
   const [minerData, setMinerData] = useState(null);
   const [allReduceOperations, setAllReduceOperations] = useState([]);
 
-  // Helper functions to generate fallback data if API fails
-  const generateDummyData = useCallback((
-    hours = 24,
-    baseValue = 0,
-    variance = 1,
-    decreasing = false
-  ) => {
-    const now = new Date();
-    return Array.from({ length: hours }, (_, i) => {
-      const time = new Date(now.getTime() - (hours - i) * 3600000).toISOString();
-      let value;
-      if (decreasing) {
-        value =
-          baseValue + variance * Math.cos(i / 5) - (i / hours) * variance * 3;
-      } else {
-        value =
-          baseValue + variance * Math.sin(i / 5) + (i / hours) * variance * 0.5;
-      }
-      return { time, value: Math.max(0, value) };
-    });
-  }, []);
-  
-  const generateDummyMinerData = useCallback((uid) => {
-    return {
-      metagraph: {
-        stake: parseFloat((Math.random() * 100).toFixed(2)),
-        trust: parseFloat((Math.random() * 1).toFixed(3)),
-        consensus: parseFloat((Math.random() * 1).toFixed(3)),
-        incentive: parseFloat((Math.random() * 1).toFixed(3)),
-        emissions: parseFloat((Math.random() * 10).toFixed(2)),
-      },
-      training: {
-        loss: generateDummyData(24, 3.2, 0.8, true),
-        inner_step: generateDummyData(24, 50, 20),
-        samples_accumulated: generateDummyData(24, 500, 100),
-      },
-      resources: {
-        cpu_percent: generateDummyData(24, 60, 15),
-        memory_percent: generateDummyData(24, 45, 10),
-        gpu_utilization: generateDummyData(24, 85, 15),
-      },
-      scores: Array.from({ length: 5 }, (_, i) => ({
-        validator_uid: i,
-        train_score: parseFloat((Math.random() * 0.8 + 0.2).toFixed(4)),
-        all_reduce_score: parseFloat((Math.random() * 0.8 + 0.2).toFixed(4)),
-        total_score: parseFloat((Math.random() * 0.8 + 0.2).toFixed(4)),
-      })),
-    };
-  }, [generateDummyData]);
-  
-  const generateDummyAllReduceOperations = useCallback(() => {
-    return Array.from({ length: 10 }, (_, i) => {
-      const time = new Date(Date.now() - i * 3600000 * 4).toISOString();
-      return {
-        operation_id: `op-${i}`,
-        epoch: 10 - i,
-        time,
-        metrics: {
-          duration: parseFloat((Math.random() * 20 + 10).toFixed(2)),
-          participating_miners: Math.floor(Math.random() * 15 + 10),
-          success_rate: parseFloat((Math.random() * 0.3 + 0.7).toFixed(2)),
-          bandwidth: parseFloat((Math.random() * 10 + 20).toFixed(2)),
-        }
-      };
-    });
-  }, []);
-
-  // Fetch global metrics
-  useEffect(() => {
-    if (activeTab === "global") {
-      fetchGlobalMetrics();
-    }
-  }, [activeTab, fetchGlobalMetrics]);
-
-  // Fetch miners list
-  useEffect(() => {
-    if (activeTab === "miners") {
-      fetchMiners();
-    }
-  }, [activeTab, fetchMiners]);
-
-  // Fetch allreduce operations
-  useEffect(() => {
-    if (activeTab === "allreduce") {
-      fetchAllReduceOperations();
-    }
-  }, [activeTab, fetchAllReduceOperations]);
-
-  // Fetch miner data when selected
-  useEffect(() => {
-    if (selectedMiner) {
-      fetchMinerData(selectedMiner);
-    }
-  }, [selectedMiner, fetchMinerData]);
-
+  // Fetch functions with proper state updates
   const fetchGlobalMetrics = useCallback(async () => {
-    setLoading({ ...loading, global: true });
-    setError({ ...error, global: null });
-  
+    setLoading(prev => ({ ...prev, global: true }));
+    setError(prev => ({ ...prev, global: null }));
+
     try {
       const response = await axios.get(`${API_BASE_URL}/metrics/global`);
       setGlobalData(response.data);
     } catch (err) {
       console.error("Error fetching global metrics:", err);
-      setError({ ...error, global: "Failed to load global metrics" });
-      
-      // Use dummy data as fallback
+      setError(prev => ({ ...prev, global: "No data currently available. Please try again later." }));
+      // Clear any existing data
       setGlobalData({
-        epochs: generateDummyData(24, 10, 0.1),
-        loss: generateDummyData(24, 3.5, 0.5, true),
-        perplexity: generateDummyData(24, 15, 3, true),
-        training_rate: generateDummyData(24, 120, 30),
-        bandwidth: generateDummyData(24, 25, 5),
-        active_miners: generateDummyData(24, 42, 8)
+        epochs: [],
+        loss: [],
+        perplexity: [],
+        training_rate: [],
+        bandwidth: [],
+        active_miners: []
       });
     } finally {
-      setLoading({ ...loading, global: false });
+      setLoading(prev => ({ ...prev, global: false }));
     }
-  }, [loading, error, generateDummyData]);
+  }, []);
 
   const fetchMiners = useCallback(async () => {
-    setLoading({ ...loading, miners: true });
-    setError({ ...error, miners: null });
-  
+    setLoading(prev => ({ ...prev, miners: true }));
+    setError(prev => ({ ...prev, miners: null }));
+
     try {
       const response = await axios.get(`${API_BASE_URL}/metrics/miners`);
       setMiners(response.data.map(uid => ({
@@ -196,53 +100,72 @@ export default function App() {
       })));
     } catch (err) {
       console.error("Error fetching miners:", err);
-      setError({ ...error, miners: "Failed to load miners list" });
-      
-      // Use dummy miners as fallback
-      setMiners(Array.from({ length: 20 }, (_, i) => ({
-        value: i.toString(),
-        label: `Miner ${i}`
-      })));
+      setError(prev => ({ ...prev, miners: "No data currently available. Please try again later." }));
+      // Clear miners list
+      setMiners([]);
     } finally {
-      setLoading({ ...loading, miners: false });
+      setLoading(prev => ({ ...prev, miners: false }));
     }
-  }, [loading, error]);
+  }, []);
 
   const fetchMinerData = useCallback(async (uid) => {
-    setLoading({ ...loading, minerData: true });
-    setError({ ...error, minerData: null });
-  
+    setLoading(prev => ({ ...prev, minerData: true }));
+    setError(prev => ({ ...prev, minerData: null }));
+
     try {
       const response = await axios.get(`${API_BASE_URL}/metrics/miner/${uid}`);
       setMinerData(response.data);
     } catch (err) {
       console.error(`Error fetching data for miner ${uid}:`, err);
-      setError({ ...error, minerData: `Failed to load data for miner ${uid}` });
-      
-      // Use dummy miner data as fallback
-      setMinerData(generateDummyMinerData(uid));
+      setError(prev => ({ ...prev, minerData: "No data currently available. Please try again later." }));
+      // Clear miner data
+      setMinerData(null);
     } finally {
-      setLoading({ ...loading, minerData: false });
+      setLoading(prev => ({ ...prev, minerData: false }));
     }
-  }, [loading, error, generateDummyMinerData]);
+  }, []);
 
   const fetchAllReduceOperations = useCallback(async () => {
-    setLoading({ ...loading, allreduce: true });
-    setError({ ...error, allreduce: null });
-  
+    setLoading(prev => ({ ...prev, allreduce: true }));
+    setError(prev => ({ ...prev, allreduce: null }));
+
     try {
       const response = await axios.get(`${API_BASE_URL}/metrics/allreduce`);
       setAllReduceOperations(response.data);
     } catch (err) {
       console.error("Error fetching AllReduce operations:", err);
-      setError({ ...error, allreduce: "Failed to load AllReduce operations" });
-      
-      // Use dummy allreduce operations as fallback
-      setAllReduceOperations(generateDummyAllReduceOperations());
+      setError(prev => ({ ...prev, allreduce: "No data currently available. Please try again later." }));
+      // Clear operations
+      setAllReduceOperations([]);
     } finally {
-      setLoading({ ...loading, allreduce: false });
+      setLoading(prev => ({ ...prev, allreduce: false }));
     }
-  }, [loading, error, generateDummyAllReduceOperations]);
+  }, []);
+
+  // Effects - these come after the fetch functions to avoid the use-before-define error
+  useEffect(() => {
+    if (activeTab === "global") {
+      fetchGlobalMetrics();
+    }
+  }, [activeTab, fetchGlobalMetrics]);
+
+  useEffect(() => {
+    if (activeTab === "miners") {
+      fetchMiners();
+    }
+  }, [activeTab, fetchMiners]);
+
+  useEffect(() => {
+    if (activeTab === "allreduce") {
+      fetchAllReduceOperations();
+    }
+  }, [activeTab, fetchAllReduceOperations]);
+
+  useEffect(() => {
+    if (selectedMiner) {
+      fetchMinerData(selectedMiner);
+    }
+  }, [selectedMiner, fetchMinerData]);
 
   const handleMinerSelect = (uid) => {
     setSelectedMiner(uid);
@@ -300,55 +223,63 @@ export default function App() {
                 <div className="charts">
                   <div className="chart-container full-width">
                     <h3>Loss Over Time <span className="epoch-indicator">Epoch {currentEpoch}</span></h3>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={globalData.loss}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="time" tickFormatter={formatTime} />
-                        <YAxis />
-                        <Tooltip
-                          labelFormatter={(label) =>
-                            new Date(label).toLocaleString()
-                          }
-                          formatter={(value) => [value.toFixed(4), "Loss"]}
-                        />
-                        <Legend />
-                        <Line
-                          type="monotone"
-                          dataKey="value"
-                          stroke="#8884d8"
-                          name="Loss"
-                          strokeWidth={2}
-                          activeDot={{ r: 8 }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
+                    {globalData.loss.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={300}>
+                        <LineChart data={globalData.loss}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="time" tickFormatter={formatTime} />
+                          <YAxis />
+                          <Tooltip
+                            labelFormatter={(label) =>
+                              new Date(label).toLocaleString()
+                            }
+                            formatter={(value) => [value.toFixed(4), "Loss"]}
+                          />
+                          <Legend />
+                          <Line
+                            type="monotone"
+                            dataKey="value"
+                            stroke="#8884d8"
+                            name="Loss"
+                            strokeWidth={2}
+                            activeDot={{ r: 8 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="no-data">No loss data available</div>
+                    )}
                   </div>
 
                   <div className="chart-container full-width">
                     <h3>Perplexity <span className="epoch-indicator">Epoch {currentEpoch}</span></h3>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <AreaChart data={globalData.perplexity}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="time" tickFormatter={formatTime} />
-                        <YAxis />
-                        <Tooltip
-                          labelFormatter={(label) =>
-                            new Date(label).toLocaleString()
-                          }
-                          formatter={(value) => [value.toFixed(2), "Perplexity"]}
-                        />
-                        <Legend />
-                        <Area
-                          type="monotone"
-                          dataKey="value"
-                          stroke="#ff7300"
-                          fill="#ff9800"
-                          name="Perplexity"
-                          strokeWidth={2}
-                          activeDot={{ r: 8 }}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                    {globalData.perplexity.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={300}>
+                        <AreaChart data={globalData.perplexity}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="time" tickFormatter={formatTime} />
+                          <YAxis />
+                          <Tooltip
+                            labelFormatter={(label) =>
+                              new Date(label).toLocaleString()
+                            }
+                            formatter={(value) => [value.toFixed(2), "Perplexity"]}
+                          />
+                          <Legend />
+                          <Area
+                            type="monotone"
+                            dataKey="value"
+                            stroke="#ff7300"
+                            fill="#ff9800"
+                            name="Perplexity"
+                            strokeWidth={2}
+                            activeDot={{ r: 8 }}
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="no-data">No perplexity data available</div>
+                    )}
                   </div>
                 </div>
 
@@ -357,7 +288,7 @@ export default function App() {
                     <div className="stat-icon bandwidth-icon">📶</div>
                     <div className="stat-content">
                       <h3>Average Bandwidth</h3>
-                      <p className="stat-value">{avgBandwidth} MB/s</p>
+                      <p className="stat-value">{globalData.bandwidth.length > 0 ? `${avgBandwidth} MB/s` : "No data"}</p>
                     </div>
                   </div>
                   
@@ -365,7 +296,7 @@ export default function App() {
                     <div className="stat-icon tokens-icon">🚀</div>
                     <div className="stat-content">
                       <h3>Average Tokens/s</h3>
-                      <p className="stat-value">{avgTrainingRate} tok/s</p>
+                      <p className="stat-value">{globalData.training_rate.length > 0 ? `${avgTrainingRate} tok/s` : "No data"}</p>
                     </div>
                   </div>
                   
@@ -373,7 +304,7 @@ export default function App() {
                     <div className="stat-icon miners-icon">👨‍💻</div>
                     <div className="stat-content">
                       <h3>Active Miners</h3>
-                      <p className="stat-value">{activeMinersCount}</p>
+                      <p className="stat-value">{globalData.active_miners.length > 0 ? activeMinersCount : "No data"}</p>
                     </div>
                   </div>
                 </div>
@@ -381,14 +312,14 @@ export default function App() {
                 <div className="stats">
                   <div className="stat-card">
                     <h3>Current Epoch</h3>
-                    <p className="stat-value">{currentEpoch}</p>
+                    <p className="stat-value">{globalData.epochs.length > 0 ? currentEpoch : "No data"}</p>
                   </div>
                   <div className="stat-card">
                     <h3>Current Loss</h3>
                     <p className="stat-value">
                       {globalData.loss.length > 0
                         ? globalData.loss[globalData.loss.length - 1].value.toFixed(4)
-                        : "N/A"}
+                        : "No data"}
                     </p>
                   </div>
                   <div className="stat-card">
@@ -396,7 +327,7 @@ export default function App() {
                     <p className="stat-value">
                       {globalData.perplexity.length > 0
                         ? globalData.perplexity[globalData.perplexity.length - 1].value.toFixed(2)
-                        : "N/A"}
+                        : "No data"}
                     </p>
                   </div>
                 </div>
@@ -413,7 +344,7 @@ export default function App() {
               <div className="loading">Loading miners list...</div>
             ) : error.miners ? (
               <div className="error-message">{error.miners}</div>
-            ) : (
+            ) : miners.length > 0 ? (
               <div className="miner-select">
                 <label className="select-label" htmlFor="miner-select">
                   Select Miner UID
@@ -430,6 +361,8 @@ export default function App() {
                   ))}
                 </select>
               </div>
+            ) : (
+              <div className="no-data">No miners available</div>
             )}
             
             {loading.minerData && (
@@ -471,7 +404,7 @@ export default function App() {
                 <div className="charts">
                   <div className="chart-container">
                     <h3>Training Loss</h3>
-                    {minerData.training?.loss ? (
+                    {minerData.training?.loss && minerData.training.loss.length > 0 ? (
                       <ResponsiveContainer width="100%" height={300}>
                         <LineChart data={minerData.training.loss}>
                           <CartesianGrid strokeDasharray="3 3" />
@@ -499,7 +432,7 @@ export default function App() {
                   
                   <div className="chart-container">
                     <h3>GPU Utilization</h3>
-                    {minerData.resources?.gpu_utilization ? (
+                    {minerData.resources?.gpu_utilization && minerData.resources.gpu_utilization.length > 0 ? (
                       <ResponsiveContainer width="100%" height={300}>
                         <AreaChart data={minerData.resources.gpu_utilization}>
                           <CartesianGrid strokeDasharray="3 3" />
@@ -558,7 +491,7 @@ export default function App() {
               </div>
             )}
             
-            {!loading.minerData && !minerData && !selectedMiner && (
+            {!loading.minerData && !minerData && !selectedMiner && miners.length > 0 && (
               <div className="no-miner-selected">
                 <p>Select a miner to view detailed metrics</p>
               </div>
@@ -623,7 +556,7 @@ export default function App() {
                   )}
                 </div>
                 
-                {allReduceOperations.length > 0 && (
+                {allReduceOperations.length > 0 ? (
                   <div className="charts">
                     <div className="chart-container">
                       <h3>Success Rate Trend</h3>
@@ -692,7 +625,7 @@ export default function App() {
                       </ResponsiveContainer>
                     </div>
                   </div>
-                )}
+                ) : null}
               </>
             )}
           </div>
