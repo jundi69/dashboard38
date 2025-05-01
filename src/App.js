@@ -28,7 +28,7 @@ const formatFullDate = (timeStr) => {
   return date.toLocaleString();
 };
 
-// Calculate averages
+// Calculate averages - safely handle empty or undefined data
 const getAverage = (data) => {
   if (!data || data.length === 0) return 0;
   return data.reduce((acc, item) => acc + item.value, 0) / data.length;
@@ -50,7 +50,7 @@ export default function App() {
     allreduce: null
   });
 
-  // Data state
+  // Data state - initialize with empty arrays for all properties
   const [globalData, setGlobalData] = useState({
     epochs: [],
     loss: [],
@@ -70,7 +70,15 @@ export default function App() {
 
     try {
       const response = await axios.get(`${API_BASE_URL}/metrics/global`);
-      setGlobalData(response.data);
+      // Ensure all expected properties exist
+      setGlobalData({
+        epochs: response.data.epochs || [],
+        loss: response.data.loss || [],
+        perplexity: response.data.perplexity || [],
+        training_rate: response.data.training_rate || [],
+        bandwidth: response.data.bandwidth || [],
+        active_miners: response.data.active_miners || []
+      });
     } catch (err) {
       console.error("Error fetching global metrics:", err);
       setError(prev => ({ ...prev, global: "No data currently available. Please try again later." }));
@@ -94,10 +102,10 @@ export default function App() {
 
     try {
       const response = await axios.get(`${API_BASE_URL}/metrics/miners`);
-      setMiners(response.data.map(uid => ({
+      setMiners(Array.isArray(response.data) ? response.data.map(uid => ({
         value: uid.toString(),
         label: `Miner ${uid}`
-      })));
+      })) : []);
     } catch (err) {
       console.error("Error fetching miners:", err);
       setError(prev => ({ ...prev, miners: "No data currently available. Please try again later." }));
@@ -131,7 +139,7 @@ export default function App() {
 
     try {
       const response = await axios.get(`${API_BASE_URL}/metrics/allreduce`);
-      setAllReduceOperations(response.data);
+      setAllReduceOperations(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
       console.error("Error fetching AllReduce operations:", err);
       setError(prev => ({ ...prev, allreduce: "No data currently available. Please try again later." }));
@@ -171,14 +179,18 @@ export default function App() {
     setSelectedMiner(uid);
   };
 
-  // Calculate key metrics
-  const avgBandwidth = getAverage(globalData.bandwidth).toFixed(2);
-  const avgTrainingRate = getAverage(globalData.training_rate).toFixed(0);
-  const activeMinersCount = globalData.active_miners.length > 0 
-    ? globalData.active_miners[globalData.active_miners.length - 1].value.toFixed(0) 
+  // Calculate key metrics - handle safely with optional chaining and fallbacks
+  const avgBandwidth = getAverage(globalData?.bandwidth || []).toFixed(2);
+  const avgTrainingRate = getAverage(globalData?.training_rate || []).toFixed(0);
+  
+  // Safe access to active_miners with checks
+  const activeMinersCount = globalData?.active_miners && globalData.active_miners.length > 0 
+    ? globalData.active_miners[globalData.active_miners.length - 1]?.value?.toFixed(0) || "0"
     : "0";
-  const currentEpoch = globalData.epochs.length > 0 
-    ? Math.max(...globalData.epochs.map(d => d.value))
+    
+  // Safe access to epochs
+  const currentEpoch = globalData?.epochs && globalData.epochs.length > 0 
+    ? Math.max(...globalData.epochs.map(d => d?.value || 0))
     : "0";
 
   return (
@@ -223,7 +235,7 @@ export default function App() {
                 <div className="charts">
                   <div className="chart-container full-width">
                     <h3>Loss Over Time <span className="epoch-indicator">Epoch {currentEpoch}</span></h3>
-                    {globalData.loss.length > 0 ? (
+                    {globalData?.loss && globalData.loss.length > 0 ? (
                       <ResponsiveContainer width="100%" height={300}>
                         <LineChart data={globalData.loss}>
                           <CartesianGrid strokeDasharray="3 3" />
@@ -253,7 +265,7 @@ export default function App() {
 
                   <div className="chart-container full-width">
                     <h3>Perplexity <span className="epoch-indicator">Epoch {currentEpoch}</span></h3>
-                    {globalData.perplexity.length > 0 ? (
+                    {globalData?.perplexity && globalData.perplexity.length > 0 ? (
                       <ResponsiveContainer width="100%" height={300}>
                         <AreaChart data={globalData.perplexity}>
                           <CartesianGrid strokeDasharray="3 3" />
@@ -288,7 +300,9 @@ export default function App() {
                     <div className="stat-icon bandwidth-icon">📶</div>
                     <div className="stat-content">
                       <h3>Average Bandwidth</h3>
-                      <p className="stat-value">{globalData.bandwidth.length > 0 ? `${avgBandwidth} MB/s` : "No data"}</p>
+                      <p className="stat-value">
+                        {globalData?.bandwidth && globalData.bandwidth.length > 0 ? `${avgBandwidth} MB/s` : "No data"}
+                      </p>
                     </div>
                   </div>
                   
@@ -296,7 +310,9 @@ export default function App() {
                     <div className="stat-icon tokens-icon">🚀</div>
                     <div className="stat-content">
                       <h3>Average Tokens/s</h3>
-                      <p className="stat-value">{globalData.training_rate.length > 0 ? `${avgTrainingRate} tok/s` : "No data"}</p>
+                      <p className="stat-value">
+                        {globalData?.training_rate && globalData.training_rate.length > 0 ? `${avgTrainingRate} tok/s` : "No data"}
+                      </p>
                     </div>
                   </div>
                   
@@ -304,7 +320,9 @@ export default function App() {
                     <div className="stat-icon miners-icon">👨‍💻</div>
                     <div className="stat-content">
                       <h3>Active Miners</h3>
-                      <p className="stat-value">{globalData.active_miners.length > 0 ? activeMinersCount : "No data"}</p>
+                      <p className="stat-value">
+                        {globalData?.active_miners && globalData.active_miners.length > 0 ? activeMinersCount : "No data"}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -312,21 +330,23 @@ export default function App() {
                 <div className="stats">
                   <div className="stat-card">
                     <h3>Current Epoch</h3>
-                    <p className="stat-value">{globalData.epochs.length > 0 ? currentEpoch : "No data"}</p>
+                    <p className="stat-value">
+                      {globalData?.epochs && globalData.epochs.length > 0 ? currentEpoch : "No data"}
+                    </p>
                   </div>
                   <div className="stat-card">
                     <h3>Current Loss</h3>
                     <p className="stat-value">
-                      {globalData.loss.length > 0
-                        ? globalData.loss[globalData.loss.length - 1].value.toFixed(4)
+                      {globalData?.loss && globalData.loss.length > 0
+                        ? globalData.loss[globalData.loss.length - 1]?.value?.toFixed(4) || "No data"
                         : "No data"}
                     </p>
                   </div>
                   <div className="stat-card">
                     <h3>Perplexity</h3>
                     <p className="stat-value">
-                      {globalData.perplexity.length > 0
-                        ? globalData.perplexity[globalData.perplexity.length - 1].value.toFixed(2)
+                      {globalData?.perplexity && globalData.perplexity.length > 0
+                        ? globalData.perplexity[globalData.perplexity.length - 1]?.value?.toFixed(2) || "No data"
                         : "No data"}
                     </p>
                   </div>
@@ -380,23 +400,23 @@ export default function App() {
                   <div className="metrics-grid">
                     <div className="metric-item">
                       <h4>Stake</h4>
-                      <p>{minerData.metagraph?.stake || 0} TAO</p>
+                      <p>{minerData?.metagraph?.stake || 0} TAO</p>
                     </div>
                     <div className="metric-item">
                       <h4>Trust</h4>
-                      <p>{minerData.metagraph?.trust || 0}</p>
+                      <p>{minerData?.metagraph?.trust || 0}</p>
                     </div>
                     <div className="metric-item">
                       <h4>Consensus</h4>
-                      <p>{minerData.metagraph?.consensus || 0}</p>
+                      <p>{minerData?.metagraph?.consensus || 0}</p>
                     </div>
                     <div className="metric-item">
                       <h4>Incentive</h4>
-                      <p>{minerData.metagraph?.incentive || 0}</p>
+                      <p>{minerData?.metagraph?.incentive || 0}</p>
                     </div>
                     <div className="metric-item">
                       <h4>Emissions</h4>
-                      <p>{minerData.metagraph?.emissions || 0} τ/day</p>
+                      <p>{minerData?.metagraph?.emissions || 0} τ/day</p>
                     </div>
                   </div>
                 </div>
@@ -404,7 +424,7 @@ export default function App() {
                 <div className="charts">
                   <div className="chart-container">
                     <h3>Training Loss</h3>
-                    {minerData.training?.loss && minerData.training.loss.length > 0 ? (
+                    {minerData?.training?.loss && minerData.training.loss.length > 0 ? (
                       <ResponsiveContainer width="100%" height={300}>
                         <LineChart data={minerData.training.loss}>
                           <CartesianGrid strokeDasharray="3 3" />
@@ -432,7 +452,7 @@ export default function App() {
                   
                   <div className="chart-container">
                     <h3>GPU Utilization</h3>
-                    {minerData.resources?.gpu_utilization && minerData.resources.gpu_utilization.length > 0 ? (
+                    {minerData?.resources?.gpu_utilization && minerData.resources.gpu_utilization.length > 0 ? (
                       <ResponsiveContainer width="100%" height={300}>
                         <AreaChart data={minerData.resources.gpu_utilization}>
                           <CartesianGrid strokeDasharray="3 3" />
@@ -463,7 +483,7 @@ export default function App() {
                 
                 <div className="validator-scores">
                   <h3>Validator Scores</h3>
-                  {minerData.scores && Object.keys(minerData.scores).length > 0 ? (
+                  {minerData?.scores && Object.keys(minerData.scores).length > 0 ? (
                     <table className="scores-table">
                       <thead>
                         <tr>
@@ -477,9 +497,9 @@ export default function App() {
                         {Object.entries(minerData.scores).map(([validator, scores]) => (
                           <tr key={validator}>
                             <td>Validator {validator}</td>
-                            <td>{(scores.train_score || 0).toFixed(4)}</td>
-                            <td>{(scores.all_reduce_score || 0).toFixed(4)}</td>
-                            <td>{(scores.total_score || 0).toFixed(4)}</td>
+                            <td>{(scores?.train_score || 0).toFixed(4)}</td>
+                            <td>{(scores?.all_reduce_score || 0).toFixed(4)}</td>
+                            <td>{(scores?.total_score || 0).toFixed(4)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -525,13 +545,13 @@ export default function App() {
                       </thead>
                       <tbody>
                         {allReduceOperations.map((op) => (
-                          <tr key={op.operation_id}>
-                            <td>{new Date(op.time).toLocaleString()}</td>
-                            <td>{op.epoch}</td>
-                            <td>{op.metrics?.duration?.toFixed(2) || 'N/A'}</td>
-                            <td>{op.metrics?.participating_miners || 'N/A'}</td>
+                          <tr key={op?.operation_id || Math.random()}>
+                            <td>{op?.time ? new Date(op.time).toLocaleString() : 'N/A'}</td>
+                            <td>{op?.epoch || 'N/A'}</td>
+                            <td>{op?.metrics?.duration?.toFixed(2) || 'N/A'}</td>
+                            <td>{op?.metrics?.participating_miners || 'N/A'}</td>
                             <td>
-                              {op.metrics?.success_rate ? (
+                              {op?.metrics?.success_rate != null ? (
                                 <div className="success-rate">
                                   <div className="progress-bar">
                                     <div 
@@ -546,7 +566,7 @@ export default function App() {
                                 </div>
                               ) : 'N/A'}
                             </td>
-                            <td>{op.metrics?.bandwidth?.toFixed(2) || 'N/A'}</td>
+                            <td>{op?.metrics?.bandwidth?.toFixed(2) || 'N/A'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -563,8 +583,8 @@ export default function App() {
                       <ResponsiveContainer width="100%" height={300}>
                         <LineChart 
                           data={allReduceOperations.slice().reverse().map(op => ({
-                            time: op.time,
-                            value: op.metrics?.success_rate || 0
+                            time: op?.time || new Date().toISOString(),
+                            value: op?.metrics?.success_rate || 0
                           }))}
                         >
                           <CartesianGrid strokeDasharray="3 3" />
@@ -598,8 +618,8 @@ export default function App() {
                       <ResponsiveContainer width="100%" height={300}>
                         <LineChart 
                           data={allReduceOperations.slice().reverse().map(op => ({
-                            time: op.time,
-                            value: op.metrics?.duration || 0
+                            time: op?.time || new Date().toISOString(),
+                            value: op?.metrics?.duration || 0
                           }))}
                         >
                           <CartesianGrid strokeDasharray="3 3" />
