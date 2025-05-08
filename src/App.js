@@ -15,24 +15,29 @@ import {
 import "./styles.css";
 import axios from "axios";
 
-const API_BASE_URL = process.env.FASTAPI_URL || "http://localhost:8000";
+const API_BASE_URL = process.env.REACT_APP_FASTAPI_URL || "http://localhost:8000"; // Ensure your .env uses REACT_APP_ prefix or Vite's VITE_ prefix
 
 // Format time helper
 const formatTime = (timeStr) => {
+  if (!timeStr) return '';
   const date = new Date(timeStr);
   return date.toLocaleTimeString();
 };
 
 const formatFullDate = (timeStr) => {
+  if (!timeStr) return '';
   const date = new Date(timeStr);
   return date.toLocaleString();
 };
 
-// Calculate averages - safely handle empty or undefined data
-const getAverage = (data) => {
-  if (!data || data.length === 0) return 0;
-  return data.reduce((acc, item) => acc + item.value, 0) / data.length;
-};
+// Define some colors for miner lines, or generate them dynamically
+const MINER_COLORS = [
+  "#8884d8", "#82ca9d", "#ffc658", "#ff7300", "#00C49F",
+  "#FFBB28", "#FF8042", "#0088FE", "#A3A1FB", "#D4A1FB",
+  "#4CAF50", "#F44336", "#E91E63", "#9C27B0", "#3F51B5",
+  "#2196F3", "#00BCD4", "#009688", "#CDDC39", "#FFEB3B",
+];
+
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("global");
@@ -50,53 +55,57 @@ export default function App() {
     allreduce: null
   });
 
-  // Data state - initialize with empty arrays for all properties
+  // Updated globalData state structure
   const [globalData, setGlobalData] = useState({
-    epochs: [],
-    loss: [],
-    perplexity: [],
-    training_rate: [],
-    bandwidth: [],
-    active_miners: []
+    all_miner_losses: {},
+    all_miner_perplexities: {},
+    // global_average_loss_series: [], // We can derive average for display if needed, or plot all
+    // global_average_perplexity_series: [], // Same as above
+    global_max_epoch_series: [],
+    global_average_training_rate_series: [],
+    global_total_bandwidth_series: [],
+    active_miners_count_series: [],
+    active_miners_current: 0,
   });
-  const [miners, setMiners] = useState([]);
-  const [minerData, setMinerData] = useState(null);
-  const [allReduceOperations, setAllReduceOperations] = useState([]);
 
-  // Fetch functions with proper state updates
+  const [miners, setMiners] = useState([]);
+  const [minerData, setMinerData] = useState(null); // Stays the same for individual miner
+  const [allReduceOperations, setAllReduceOperations] = useState([]); // Stays the same
+
   const fetchGlobalMetrics = useCallback(async () => {
     setLoading(prev => ({ ...prev, global: true }));
     setError(prev => ({ ...prev, global: null }));
-
     try {
       const response = await axios.get(`${API_BASE_URL}/metrics/global`);
-      // Ensure all expected properties exist
       setGlobalData({
-        epochs: response.data.epochs || [],
-        loss: response.data.loss || [],
-        perplexity: response.data.perplexity || [],
-        training_rate: response.data.training_rate || [],
-        bandwidth: response.data.bandwidth || [],
-        active_miners: response.data.active_miners || []
+        all_miner_losses: response.data.all_miner_losses || {},
+        all_miner_perplexities: response.data.all_miner_perplexities || {},
+        // Assuming backend now provides these specific keys based on our last discussion
+        global_max_epoch_series: response.data.global_max_epoch_series || [],
+        global_average_training_rate_series: response.data.global_average_training_rate_series || [],
+        global_total_bandwidth_series: response.data.global_total_bandwidth_series || [],
+        active_miners_count_series: response.data.active_miners_count_series || [],
+        active_miners_current: response.data.active_miners_current || 0,
       });
     } catch (err) {
       console.error("Error fetching global metrics:", err);
       setError(prev => ({ ...prev, global: "No data currently available. Please try again later." }));
-      // Clear any existing data
-      setGlobalData({
-        epochs: [],
-        loss: [],
-        perplexity: [],
-        training_rate: [],
-        bandwidth: [],
-        active_miners: []
+      setGlobalData({ // Reset to initial structure on error
+        all_miner_losses: {},
+        all_miner_perplexities: {},
+        global_max_epoch_series: [],
+        global_average_training_rate_series: [],
+        global_total_bandwidth_series: [],
+        active_miners_count_series: [],
+        active_miners_current: 0,
       });
     } finally {
       setLoading(prev => ({ ...prev, global: false }));
     }
   }, []);
 
-  const fetchMiners = useCallback(async () => {
+  // fetchMiners, fetchMinerData, fetchAllReduceOperations remain the same
+    const fetchMiners = useCallback(async () => {
     setLoading(prev => ({ ...prev, miners: true }));
     setError(prev => ({ ...prev, miners: null }));
 
@@ -109,7 +118,6 @@ export default function App() {
     } catch (err) {
       console.error("Error fetching miners:", err);
       setError(prev => ({ ...prev, miners: "No data currently available. Please try again later." }));
-      // Clear miners list
       setMiners([]);
     } finally {
       setLoading(prev => ({ ...prev, miners: false }));
@@ -117,6 +125,10 @@ export default function App() {
   }, []);
 
   const fetchMinerData = useCallback(async (uid) => {
+    if (!uid) { // Prevent fetching if uid is null or empty
+        setMinerData(null);
+        return;
+    }
     setLoading(prev => ({ ...prev, minerData: true }));
     setError(prev => ({ ...prev, minerData: null }));
 
@@ -125,8 +137,7 @@ export default function App() {
       setMinerData(response.data);
     } catch (err) {
       console.error(`Error fetching data for miner ${uid}:`, err);
-      setError(prev => ({ ...prev, minerData: "No data currently available. Please try again later." }));
-      // Clear miner data
+      setError(prev => ({ ...prev, minerData: "No data currently available for this miner. Please try again later." }));
       setMinerData(null);
     } finally {
       setLoading(prev => ({ ...prev, minerData: false }));
@@ -143,14 +154,13 @@ export default function App() {
     } catch (err) {
       console.error("Error fetching AllReduce operations:", err);
       setError(prev => ({ ...prev, allreduce: "No data currently available. Please try again later." }));
-      // Clear operations
       setAllReduceOperations([]);
     } finally {
       setLoading(prev => ({ ...prev, allreduce: false }));
     }
   }, []);
 
-  // Effects - these come after the fetch functions to avoid the use-before-define error
+
   useEffect(() => {
     if (activeTab === "global") {
       fetchGlobalMetrics();
@@ -160,8 +170,15 @@ export default function App() {
   useEffect(() => {
     if (activeTab === "miners") {
       fetchMiners();
+      // If a miner was previously selected, re-fetch their data when switching to this tab
+      // or clear it if you prefer the user to re-select.
+      if (selectedMiner) {
+        fetchMinerData(selectedMiner);
+      } else {
+        setMinerData(null); // Clear previous miner data if no miner is selected
+      }
     }
-  }, [activeTab, fetchMiners]);
+  }, [activeTab, fetchMiners, selectedMiner, fetchMinerData]); // Added selectedMiner & fetchMinerData
 
   useEffect(() => {
     if (activeTab === "allreduce") {
@@ -169,37 +186,43 @@ export default function App() {
     }
   }, [activeTab, fetchAllReduceOperations]);
 
+  // This useEffect specifically handles fetching data when selectedMiner changes.
+  // It's separate from the tab switching logic.
   useEffect(() => {
-    if (selectedMiner) {
+    if (selectedMiner && activeTab === "miners") { // Only fetch if on miners tab and a miner is selected
       fetchMinerData(selectedMiner);
     }
-  }, [selectedMiner, fetchMinerData]);
+  }, [selectedMiner, activeTab, fetchMinerData]); // Ensure activeTab is a dependency
 
   const handleMinerSelect = (uid) => {
-    setSelectedMiner(uid);
+    setSelectedMiner(uid); // This will trigger the useEffect above if activeTab is "miners"
   };
 
-  // Calculate key metrics - handle safely with optional chaining and fallbacks
-  const avgBandwidth = getAverage(globalData?.bandwidth || []).toFixed(2);
-  const avgTrainingRate = getAverage(globalData?.training_rate || []).toFixed(0);
+
+  // Calculate key metrics for display - these now use the new globalData structure
+  // For average bandwidth and training rate, we'll display the latest value from the series
+  const latestTotalBandwidth = globalData?.global_total_bandwidth_series && globalData.global_total_bandwidth_series.length > 0
+    ? globalData.global_total_bandwidth_series[globalData.global_total_bandwidth_series.length - 1]?.value?.toFixed(2)
+    : "0";
+
+  const latestAvgTrainingRate = globalData?.global_average_training_rate_series && globalData.global_average_training_rate_series.length > 0
+    ? globalData.global_average_training_rate_series[globalData.global_average_training_rate_series.length - 1]?.value?.toFixed(0)
+    : "0";
   
-  // Safe access to active_miners with checks
-  const activeMinersCount = globalData?.active_miners && globalData.active_miners.length > 0 
-    ? globalData.active_miners[globalData.active_miners.length - 1]?.value?.toFixed(0) || "0"
-    : "0";
+  const activeMinersCurrentCount = globalData?.active_miners_current || "0";
     
-  // Safe access to epochs
-  const currentEpoch = globalData?.epochs && globalData.epochs.length > 0 
-    ? Math.max(...globalData.epochs.map(d => d?.value || 0))
+  const currentMaxEpoch = globalData?.global_max_epoch_series && globalData.global_max_epoch_series.length > 0
+    ? globalData.global_max_epoch_series[globalData.global_max_epoch_series.length - 1]?.value
     : "0";
+
 
   return (
     <div className="App">
       <div className="header">
         <h1>Distributed Training</h1>
         <p>Communally Training LLMs</p>
-
         <div className="tabs">
+          {/* ... tab buttons ... */}
           <button
             className={activeTab === "global" ? "active" : ""}
             onClick={() => setActiveTab("global")}
@@ -224,7 +247,7 @@ export default function App() {
       <div className="content">
         {activeTab === "global" && (
           <div className="global-view">
-            <h2>Global Model Performance</h2>
+            <h2>Global Training Overview</h2> {/* Updated Title */}
             
             {loading.global ? (
               <div className="loading">Loading global metrics...</div>
@@ -233,75 +256,82 @@ export default function App() {
             ) : (
               <>
                 <div className="charts">
+                  {/* All Miner Losses Chart */}
                   <div className="chart-container full-width">
-                    <h3>Loss Over Time <span className="epoch-indicator">Epoch {currentEpoch}</span></h3>
-                    {globalData?.loss && globalData.loss.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={300}>
-                        <LineChart data={globalData.loss}>
+                    <h3>All Miner Losses <span className="epoch-indicator">Max Epoch {currentMaxEpoch}</span></h3>
+                    {globalData?.all_miner_losses && Object.keys(globalData.all_miner_losses).length > 0 ? (
+                      <ResponsiveContainer width="100%" height={350}>
+                        <LineChart margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                           <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="time" tickFormatter={formatTime} />
+                          <XAxis dataKey="time" type="category" allowDuplicatedCategory={false} tickFormatter={formatTime} />
                           <YAxis />
-                          <Tooltip
-                            labelFormatter={(label) =>
-                              new Date(label).toLocaleString()
-                            }
-                            formatter={(value) => [value.toFixed(4), "Loss"]}
-                          />
+                          <Tooltip labelFormatter={formatFullDate} />
                           <Legend />
-                          <Line
-                            type="monotone"
-                            dataKey="value"
-                            stroke="#8884d8"
-                            name="Loss"
-                            strokeWidth={2}
-                            activeDot={{ r: 8 }}
-                          />
+                          {Object.entries(globalData.all_miner_losses).map(([minerUid, lossData], index) => (
+                            lossData && lossData.length > 0 && (
+                              <Line
+                                key={`loss-${minerUid}`}
+                                type="monotone"
+                                data={lossData}
+                                dataKey="value"
+                                name={`Miner ${minerUid} Loss`}
+                                stroke={MINER_COLORS[index % MINER_COLORS.length]}
+                                strokeWidth={1.5}
+                                dot={false}
+                                activeDot={{ r: 5 }}
+                              />
+                            )
+                          ))}
                         </LineChart>
                       </ResponsiveContainer>
                     ) : (
-                      <div className="no-data">No loss data available</div>
+                      <div className="no-data">No miner loss data available</div>
                     )}
                   </div>
 
+                  {/* All Miner Perplexities Chart */}
                   <div className="chart-container full-width">
-                    <h3>Perplexity <span className="epoch-indicator">Epoch {currentEpoch}</span></h3>
-                    {globalData?.perplexity && globalData.perplexity.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={300}>
-                        <AreaChart data={globalData.perplexity}>
+                    <h3>All Miner Perplexities <span className="epoch-indicator">Max Epoch {currentMaxEpoch}</span></h3>
+                    {globalData?.all_miner_perplexities && Object.keys(globalData.all_miner_perplexities).length > 0 ? (
+                      <ResponsiveContainer width="100%" height={350}>
+                        <AreaChart margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                           <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="time" tickFormatter={formatTime} />
+                          <XAxis dataKey="time" type="category" allowDuplicatedCategory={false} tickFormatter={formatTime} />
                           <YAxis />
-                          <Tooltip
-                            labelFormatter={(label) =>
-                              new Date(label).toLocaleString()
-                            }
-                            formatter={(value) => [value.toFixed(2), "Perplexity"]}
-                          />
+                          <Tooltip labelFormatter={formatFullDate}/>
                           <Legend />
-                          <Area
-                            type="monotone"
-                            dataKey="value"
-                            stroke="#ff7300"
-                            fill="#ff9800"
-                            name="Perplexity"
-                            strokeWidth={2}
-                            activeDot={{ r: 8 }}
-                          />
+                          {Object.entries(globalData.all_miner_perplexities).map(([minerUid, perplexityData], index) => (
+                            perplexityData && perplexityData.length > 0 && (
+                              <Area
+                                key={`perplexity-${minerUid}`}
+                                type="monotone"
+                                data={perplexityData}
+                                dataKey="value"
+                                name={`Miner ${minerUid} Perplexity`}
+                                stroke={MINER_COLORS[index % MINER_COLORS.length]}
+                                fill={MINER_COLORS[index % MINER_COLORS.length]}
+                                fillOpacity={0.2} // Reduced opacity for better stacking visibility
+                                strokeWidth={1.5}
+                                activeDot={{ r: 5 }}
+                              />
+                            )
+                          ))}
                         </AreaChart>
                       </ResponsiveContainer>
                     ) : (
-                      <div className="no-data">No perplexity data available</div>
+                      <div className="no-data">No miner perplexity data available</div>
                     )}
                   </div>
                 </div>
 
+                {/* Updated Stats Overview Cards */}
                 <div className="stats-overview">
                   <div className="stat-overview-card">
                     <div className="stat-icon bandwidth-icon">📶</div>
                     <div className="stat-content">
-                      <h3>Average Bandwidth</h3>
+                      <h3>Global Bandwidth (Total)</h3> {/* Clarified title */}
                       <p className="stat-value">
-                        {globalData?.bandwidth && globalData.bandwidth.length > 0 ? `${avgBandwidth} MB/s` : "No data"}
+                        {latestTotalBandwidth !== "0" ? `${latestTotalBandwidth} MB/s` : "No data"}
                       </p>
                     </div>
                   </div>
@@ -309,9 +339,9 @@ export default function App() {
                   <div className="stat-overview-card">
                     <div className="stat-icon tokens-icon">🚀</div>
                     <div className="stat-content">
-                      <h3>Average Tokens/s</h3>
+                      <h3>Global Training Rate (Avg)</h3> {/* Clarified title */}
                       <p className="stat-value">
-                        {globalData?.training_rate && globalData.training_rate.length > 0 ? `${avgTrainingRate} tok/s` : "No data"}
+                        {latestAvgTrainingRate !== "0" ? `${latestAvgTrainingRate} tok/s` : "No data"}
                       </p>
                     </div>
                   </div>
@@ -321,36 +351,18 @@ export default function App() {
                     <div className="stat-content">
                       <h3>Active Miners</h3>
                       <p className="stat-value">
-                        {globalData?.active_miners && globalData.active_miners.length > 0 ? activeMinersCount : "No data"}
+                        {activeMinersCurrentCount}
                       </p>
                     </div>
                   </div>
                 </div>
 
+                {/* Removed the smaller "stats" div as requested */}
+                {/* 
                 <div className="stats">
-                  <div className="stat-card">
-                    <h3>Current Epoch</h3>
-                    <p className="stat-value">
-                      {globalData?.epochs && globalData.epochs.length > 0 ? currentEpoch : "No data"}
-                    </p>
-                  </div>
-                  <div className="stat-card">
-                    <h3>Current Loss</h3>
-                    <p className="stat-value">
-                      {globalData?.loss && globalData.loss.length > 0
-                        ? globalData.loss[globalData.loss.length - 1]?.value?.toFixed(4) || "No data"
-                        : "No data"}
-                    </p>
-                  </div>
-                  <div className="stat-card">
-                    <h3>Perplexity</h3>
-                    <p className="stat-value">
-                      {globalData?.perplexity && globalData.perplexity.length > 0
-                        ? globalData.perplexity[globalData.perplexity.length - 1]?.value?.toFixed(2) || "No data"
-                        : "No data"}
-                    </p>
-                  </div>
+                  // ... old stat cards for Current Epoch, Current Loss, Perplexity ...
                 </div>
+                */}
               </>
             )}
           </div>
@@ -358,6 +370,8 @@ export default function App() {
 
         {activeTab === "miners" && (
           <div className="miner-explorer">
+            {/* ... Miner Explorer JSX (remains largely the same as your provided code) ... */}
+            {/* Make sure the "Incentive Over Time" chart uses minerData.incentive_timeseries */}
             <h2>Miner Explorer</h2>
             
             {loading.miners ? (
@@ -385,38 +399,38 @@ export default function App() {
               <div className="no-data">No miners available</div>
             )}
             
-            {loading.minerData && (
-              <div className="loading">Loading miner data...</div>
+            {loading.minerData && selectedMiner && ( // Only show loading if a miner is selected and loading
+              <div className="loading">Loading data for Miner {selectedMiner}...</div>
             )}
             
-            {error.minerData && (
+            {error.minerData && selectedMiner &&( // Only show error if a miner is selected and error occurred
               <div className="error-message">{error.minerData}</div>
             )}
             
-            {!loading.minerData && !error.minerData && minerData && (
+            {!loading.minerData && !error.minerData && minerData && selectedMiner && (
               <div>
                 <div className="miner-metrics">
-                  <h3>Miner Metrics</h3>
+                  <h3>Miner Metrics (UID: {selectedMiner})</h3>
                   <div className="metrics-grid">
                     <div className="metric-item">
                       <h4>Stake</h4>
-                      <p>{minerData?.metagraph?.stake || 0} TAO</p>
+                      <p>{minerData?.metagraph?.stake?.toFixed(2) || 0} TAO</p>
                     </div>
                     <div className="metric-item">
                       <h4>Trust</h4>
-                      <p>{minerData?.metagraph?.trust || 0}</p>
+                      <p>{minerData?.metagraph?.trust?.toFixed(4) || 0}</p>
                     </div>
                     <div className="metric-item">
                       <h4>Consensus</h4>
-                      <p>{minerData?.metagraph?.consensus || 0}</p>
+                      <p>{minerData?.metagraph?.consensus?.toFixed(4) || 0}</p>
                     </div>
                     <div className="metric-item">
                       <h4>Incentive</h4>
-                      <p>{minerData?.metagraph?.incentive || 0}</p>
+                      <p>{minerData?.metagraph?.incentive?.toFixed(4) || 0}</p>
                     </div>
                     <div className="metric-item">
                       <h4>Emissions</h4>
-                      <p>{minerData?.metagraph?.emissions || 0} τ/day</p>
+                      <p>{minerData?.metagraph?.emissions?.toFixed(4) || 0} τ/day</p>
                     </div>
                   </div>
                 </div>
@@ -446,7 +460,7 @@ export default function App() {
                         </LineChart>
                       </ResponsiveContainer>
                     ) : (
-                      <div className="no-data">No loss data available</div>
+                      <div className="no-data">No loss data available for this miner</div>
                     )}
                   </div>
                   
@@ -457,10 +471,10 @@ export default function App() {
                         <LineChart data={minerData.incentive_timeseries}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="time" tickFormatter={formatTime} />
-                          <YAxis />
+                          <YAxis  domain={['auto', 'auto']} tickFormatter={(value) => value.toFixed(4)}/> {/* Adjust domain/formatter if needed */}
                           <Tooltip
                             labelFormatter={(label) => new Date(label).toLocaleString()}
-                            formatter={(value) => [value.toFixed(4), 'Incentive']}
+                            formatter={(value) => [value.toFixed(5), 'Incentive']}
                           />
                           <Legend />
                           <Line
@@ -474,7 +488,7 @@ export default function App() {
                         </LineChart>
                       </ResponsiveContainer>
                     ) : (
-                      <div className="no-data">No incentive time-series data available</div>
+                      <div className="no-data">No incentive time-series data available for this miner</div>
                     )}
                   </div>
                 </div>
@@ -503,21 +517,26 @@ export default function App() {
                       </tbody>
                     </table>
                   ) : (
-                    <div className="no-data">No validator scores available</div>
+                    <div className="no-data">No validator scores available for this miner</div>
                   )}
                 </div>
               </div>
             )}
             
-            {!loading.minerData && !minerData && !selectedMiner && miners.length > 0 && (
+            {!loading.minerData && !selectedMiner && miners.length > 0 && (
               <div className="no-miner-selected">
                 <p>Select a miner to view detailed metrics</p>
               </div>
             )}
+             {!loading.minerData && selectedMiner && !minerData && !error.minerData && (
+              <div className="no-data">No data available for Miner {selectedMiner} yet.</div>
+            )}
+
           </div>
         )}
 
         {activeTab === "allreduce" && (
+          // ... AllReduce Operations JSX (remains the same as your provided code) ...
           <div className="allreduce-operations">
             <h2>AllReduce Operations</h2>
             
@@ -654,10 +673,16 @@ export default function App() {
         <button 
           className="refresh-button"
           onClick={() => {
-            if (activeTab === "global") fetchGlobalMetrics();
-            else if (activeTab === "miners") fetchMiners();
-            else if (activeTab === "allreduce") fetchAllReduceOperations();
-            if (selectedMiner) fetchMinerData(selectedMiner);
+            if (activeTab === "global") {
+                fetchGlobalMetrics();
+            } else if (activeTab === "miners") {
+                fetchMiners(); // Refresh list of miners
+                if (selectedMiner) { // If a miner is selected, refresh their data too
+                    fetchMinerData(selectedMiner);
+                }
+            } else if (activeTab === "allreduce") {
+                fetchAllReduceOperations();
+            }
           }}
         >
           Refresh Data
