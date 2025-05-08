@@ -451,35 +451,34 @@ export default function App() {
                   </div>
                   
                   <div className="chart-container">
-                    <h3>GPU Utilization</h3>
-                    {minerData?.resources?.gpu_utilization && minerData.resources.gpu_utilization.length > 0 ? (
+                    <h3>Incentive Over Time</h3>
+                    {/* Ensure minerData and the new incentive_timeseries key exist */}
+                    {minerData?.incentive_timeseries && minerData.incentive_timeseries.length > 0 ? (
                       <ResponsiveContainer width="100%" height={300}>
-                        <AreaChart data={minerData.resources.gpu_utilization}>
+                        {/* Use LineChart or AreaChart as you prefer */}
+                        <LineChart data={minerData.incentive_timeseries}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="time" tickFormatter={formatTime} />
-                          <YAxis />
+                          <YAxis /> {/* You might want to format the YAxis ticks if incentive values are small */}
                           <Tooltip
                             labelFormatter={(label) => new Date(label).toLocaleString()}
-                            formatter={(value) => [value.toFixed(2), '%']} 
+                            formatter={(value) => [value.toFixed(4), 'Incentive']} // Adjust toFixed as needed
                           />
                           <Legend />
-                          <Area
+                          <Line
                             type="monotone"
-                            dataKey="value"
-                            stroke="#82ca9d"
-                            fill="#82ca9d"
-                            fillOpacity={0.3}
-                            name="GPU Utilization"
+                            dataKey="value" // Assumes each object in incentive_timeseries has { time: "...", value: ... }
+                            stroke="#387908" // Choose a color
+                            name="Incentive"
                             strokeWidth={2}
                             activeDot={{ r: 8 }}
                           />
-                        </AreaChart>
+                        </LineChart>
                       </ResponsiveContainer>
                     ) : (
-                      <div className="no-data">No GPU utilization data available</div>
+                      <div className="no-data">No incentive time-series data available</div>
                     )}
                   </div>
-                </div>
                 
                 <div className="validator-scores">
                   <h3>Validator Scores</h3>
