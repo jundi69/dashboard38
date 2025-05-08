@@ -452,23 +452,21 @@ export default function App() {
                   
                   <div className="chart-container">
                     <h3>Incentive Over Time</h3>
-                    {/* Ensure minerData and the new incentive_timeseries key exist */}
                     {minerData?.incentive_timeseries && minerData.incentive_timeseries.length > 0 ? (
                       <ResponsiveContainer width="100%" height={300}>
-                        {/* Use LineChart or AreaChart as you prefer */}
                         <LineChart data={minerData.incentive_timeseries}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="time" tickFormatter={formatTime} />
-                          <YAxis /> {/* You might want to format the YAxis ticks if incentive values are small */}
+                          <YAxis />
                           <Tooltip
                             labelFormatter={(label) => new Date(label).toLocaleString()}
-                            formatter={(value) => [value.toFixed(4), 'Incentive']} // Adjust toFixed as needed
+                            formatter={(value) => [value.toFixed(4), 'Incentive']}
                           />
                           <Legend />
                           <Line
                             type="monotone"
-                            dataKey="value" // Assumes each object in incentive_timeseries has { time: "...", value: ... }
-                            stroke="#387908" // Choose a color
+                            dataKey="value" 
+                            stroke="#387908"
                             name="Incentive"
                             strokeWidth={2}
                             activeDot={{ r: 8 }}
@@ -479,6 +477,7 @@ export default function App() {
                       <div className="no-data">No incentive time-series data available</div>
                     )}
                   </div>
+                </div>
                 
                 <div className="validator-scores">
                   <h3>Validator Scores</h3>
