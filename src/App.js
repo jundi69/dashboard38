@@ -310,6 +310,7 @@ export default function App() {
                                 name={`Miner ${minerUid} Perplexity`}
                                 stroke={MINER_COLORS[index % MINER_COLORS.length]}
                                 strokeWidth={1.5}
+                                dot={false}
                                 activeDot={{ r: 5 }}
                               />
                             )
