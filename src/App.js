@@ -294,7 +294,7 @@ export default function App() {
                     <h3>All Miner Perplexities <span className="epoch-indicator">Max Epoch {currentMaxEpoch}</span></h3>
                     {globalData?.all_miner_perplexities && Object.keys(globalData.all_miner_perplexities).length > 0 ? (
                       <ResponsiveContainer width="100%" height={350}>
-                        <AreaChart margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                        <LineChart margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="time" type="category" allowDuplicatedCategory={false} tickFormatter={formatTime} />
                           <YAxis />
@@ -302,21 +302,19 @@ export default function App() {
                           <Legend />
                           {Object.entries(globalData.all_miner_perplexities).map(([minerUid, perplexityData], index) => (
                             perplexityData && perplexityData.length > 0 && (
-                              <Area
+                              <Line
                                 key={`perplexity-${minerUid}`}
                                 type="monotone"
                                 data={perplexityData}
                                 dataKey="value"
                                 name={`Miner ${minerUid} Perplexity`}
                                 stroke={MINER_COLORS[index % MINER_COLORS.length]}
-                                fill={MINER_COLORS[index % MINER_COLORS.length]}
-                                fillOpacity={0.2} // Reduced opacity for better stacking visibility
                                 strokeWidth={1.5}
                                 activeDot={{ r: 5 }}
                               />
                             )
                           ))}
-                        </AreaChart>
+                        </LineChart>
                       </ResponsiveContainer>
                     ) : (
                       <div className="no-data">No miner perplexity data available</div>
