@@ -16,25 +16,24 @@ html, body {
   padding: 0;
 }
 
-/* Base font and body styles from the image */
+/* Base font and body styles - TARGETING THE NEW IMAGE */
 body {
-  font-family: Montserrat, sans-serif; /* From image */
-  font-size: 16px;                   /* From image */
-  line-height: 28px;                 /* From image */
-  font-weight: 400;                  /* From image (often default) */
-  background-color: #000;            /* From image (effective body background) */
-  color: #1a1b1f;                   /* From image (effective body text color) - VERY LOW CONTRAST with #000 BG */
+  font-family: Montserrat, sans-serif;
+  font-size: 16px;
+  line-height: 1.6; /* Adjusted for better readability with lighter text */
+  font-weight: 400;
+  background-color: #000000;         /* Pure black background */
+  color: #e0e0e0;                  /* Light grey for default text */
 
-  -webkit-font-smoothing: antialiased; /* Kept from user's original */
-  -moz-osx-font-smoothing: grayscale;  /* Kept from user's original */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
-  /* Adjust color if needed based on its specific background */
-  background-color: #0f0f0f;
-  color: #3a3b3f; /* Dark text for code blocks */
+  background-color: #1a1a1a; /* Dark background for code blocks */
+  color: #cccccc;            /* Light grey text for code */
   padding: 0.2em 0.4em;
   border-radius: 3px;
 }
@@ -45,58 +44,60 @@ code {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  /* Inherits background and color from body */
 }
 
 /* Header Styles */
 .header {
-  background-color: #050505; /* Very dark, slightly off-black */
+  background-color: #000000; /* Consistent black */
   padding: 20px;
-  border-bottom: 1px solid #1a1a1a; /* Dark border */
-  color: #1a1b1f; /* Inherited or explicitly set */
+  border-bottom: 1px solid #222222; /* Subtle dark border */
+  color: #f5f5f5;                  /* Very light text for header default */
 }
 
 .header h1 {
   margin: 0 0 5px 0;
   font-size: 2.5em;
-  color: #2c2e35; /* Slightly more prominent dark color */
+  color: #ffffff; /* White for main title */
 }
 
 .header p {
   margin: 0 0 20px 0;
   font-size: 1.1em;
-  color: #1a1b1f; /* Consistent with body text */
+  color: #bbbbbb; /* Lighter grey for subtitle */
 }
 
-/* Tabs */
+/* Tabs - Styled more like navigation links from target */
 .tabs {
   margin-bottom: 20px;
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: 10px; /* Can adjust gap as needed */
 }
 
 .tabs button {
-  background-color: #0f0f0f; /* Dark grey */
-  color: #4a4b4f;            /* Darker text, but visible on #0f0f0f */
-  border: 1px solid #252525;
+  background-color: #111111;    /* Dark grey, slightly off black */
+  color: #cccccc;              /* Light grey text */
+  border: 1px solid #333333;   /* Subtle border */
   padding: 10px 20px;
   cursor: pointer;
   font-size: 1em;
   border-radius: 5px;
   transition: background-color 0.3s, color 0.3s;
   font-family: inherit; /* Uses Montserrat */
+  font-weight: 500; /* Slightly bolder for tabs */
 }
 
 .tabs button:hover {
-  background-color: #1a1a1a;
-  color: #5a5b5f;
+  background-color: #222222;
+  color: #ffffff;
 }
 
+/* Active tab style - mimicking "TRAIN/STAKE" buttons from target */
 .tabs button.active {
-  background-color: #2a2a2a; /* Darker active state */
-  color: #6a6b6f;            /* Slightly lighter text for active */
-  border-color: #3a3a3a;
+  background-color: #b0b0b0; /* Light grey background for active tab */
+  color: #000000;            /* Black text for active tab */
+  border-color: #b0b0b0;
+  font-weight: bold;
 }
 
 /* Content Area */
@@ -108,11 +109,11 @@ code {
 .global-view h2,
 .miner-explorer h2,
 .allreduce-operations h2 {
-  color: #2c2e35; /* Consistent with header h1 */
+  color: #ffffff; /* White for section titles */
   margin-top: 0;
   margin-bottom: 25px;
   font-size: 1.8em;
-  border-bottom: 1px solid #252525; /* Darker border */
+  border-bottom: 1px solid #333333; /* Darker border */
   padding-bottom: 10px;
 }
 
@@ -125,10 +126,10 @@ code {
 }
 
 .chart-container {
-  background-color: #0a0a0a; /* Dark background for chart cards */
+  background-color: #0f0f0f; /* Very dark grey, almost black, for chart cards */
   padding: 20px;
   border-radius: 8px;
-  border: 1px solid #1f1f1f; /* Subtle border instead of shadow */
+  border: 1px solid #2a2a2a;
   box-shadow: none;
 }
 
@@ -139,44 +140,53 @@ code {
 .chart-container h3 {
   margin-top: 0;
   margin-bottom: 15px;
-  color: #2c2e35; /* Dark text */
+  color: #e0e0e0; /* Light grey for chart titles */
   font-size: 1.3em;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.epoch-indicator {
-  font-size: 0.8em;
-  color: #444; /* Dark grey text */
-  background-color: #151515; /* Very dark background */
-  padding: 3px 8px;
+/* "Max Epoch" button style - like "VIEW RUN" */
+.epoch-indicator, button.epoch-like-button { /* Add class epoch-like-button to the actual button */
+  font-size: 0.9em;
+  color: #000000;            /* Black text */
+  background-color: #b0b0b0; /* Light grey background */
+  padding: 6px 12px;
   border-radius: 4px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.epoch-indicator:hover, button.epoch-like-button:hover {
+  background-color: #c0c0c0;
 }
 
-/* Recharts specific dark mode overrides (texts, lines)
-   NOTE: These colors are lighter than the body text for readability of charts.
-*/
+
+/* Recharts specific dark mode overrides (texts, lines) */
 .recharts-legend-item-text {
-  color: #777 !important; /* Medium-grey for legend text on dark chart BG */
+  color: #aaaaaa !important;
 }
-.recharts-tooltip-wrapper { /* Assuming default Recharts tooltip style or a dark one */
+.recharts-tooltip-wrapper {
   background-color: #1c1c1c !important;
   border: 1px solid #333 !important;
+  border-radius: 4px !important;
 }
 .recharts-tooltip-wrapper .recharts-tooltip-label {
-  color: #bbb !important; /* Light text for tooltip label on dark tooltip BG */
+  color: #f0f0f0 !important;
   margin-bottom: 5px !important;
+  font-weight: bold !important;
 }
 .recharts-tooltip-item {
-  color: #999 !important; /* Medium-grey for tooltip item text */
+  color: #d0d0d0 !important;
 }
 .recharts-cartesian-axis-tick-value {
-  fill: #888 !important; /* Medium-grey for axis tick labels */
+  fill: #aaaaaa !important;
 }
 .recharts-cartesian-grid-horizontal line,
 .recharts-cartesian-grid-vertical line {
-  stroke: #222222 !important; /* Very dark grid lines, but visible on #0a0a0a */
+  stroke: #282828 !important; /* Darker grey grid lines */
 }
 
 
@@ -189,35 +199,36 @@ code {
 }
 
 .stat-overview-card {
-  background-color: #0a0a0a; /* Consistent with chart-container */
+  background-color: #0f0f0f; /* Consistent with chart-container */
   padding: 20px;
   border-radius: 8px;
   display: flex;
   align-items: center;
   gap: 15px;
-  border: 1px solid #1f1f1f;
+  border: 1px solid #2a2a2a;
   box-shadow: none;
 }
 
 .stat-icon {
   font-size: 2.5em;
-  color: #333; /* General muted icon color */
+  color: #888888; /* Medium grey for icons */
 }
-.bandwidth-icon { color: #2a4a5a; } /* Muted blue-grey */
-.tokens-icon { color: #5a4a2a; }   /* Muted orange-grey */
-.miners-icon { color: #3a5a3a; }    /* Muted green-grey */
+/* More distinct icon colors, but still desaturated for the theme */
+.bandwidth-icon { color: #6c99bb; } /* Muted blue */
+.tokens-icon { color: #bba26c; }   /* Muted orange/gold */
+.miners-icon { color: #7fbb6c; }    /* Muted green */
 
 .stat-content h3 {
   margin: 0 0 5px 0;
   font-size: 1em;
-  color: #3c3e45; /* Darker text for labels */
+  color: #bbbbbb; /* Light grey for labels */
   font-weight: normal;
 }
 
 .stat-content .stat-value {
   font-size: 1.8em;
   font-weight: bold;
-  color: #2c2e35; /* Darker, more prominent text for values */
+  color: #ffffff; /* White for stat values */
   margin: 0;
 }
 
@@ -232,21 +243,22 @@ code {
 
 .select-label {
   font-size: 1.1em;
-  color: #2c2e35; /* Dark text */
+  color: #e0e0e0; /* Light grey */
 }
 
 .miner-select-dropdown {
   padding: 10px 15px;
   font-size: 1em;
   border-radius: 5px;
-  background-color: #0f0f0f;
-  color: #4a4b4f; /* Darker text */
-  border: 1px solid #252525;
+  background-color: #1a1a1a; /* Dark grey background */
+  color: #e0e0e0;            /* Light grey text */
+  border: 1px solid #444444;
   min-width: 250px;
-  font-family: inherit; /* Uses Montserrat */
+  font-family: inherit;
 }
 .miner-select-dropdown:focus {
-  outline: 1px solid #353535;
+  outline: 1px solid #555555;
+  border-color: #555555;
 }
 
 
@@ -258,16 +270,16 @@ code {
 }
 
 .metric-item {
-  background-color: #0f0f0f;
+  background-color: #1a1a1a; /* Dark grey, slightly lighter than card backgrounds */
   padding: 15px;
   border-radius: 6px;
   text-align: center;
-  border: 1px solid #1f1f1f;
+  border: 1px solid #333333;
 }
 
 .metric-item h4 {
   margin: 0 0 8px 0;
-  color: #3c3e45; /* Dark text for metric titles */
+  color: #bbbbbb; /* Light grey for metric titles */
   font-size: 0.9em;
   font-weight: normal;
   text-transform: uppercase;
@@ -276,7 +288,7 @@ code {
 .metric-item p {
   margin: 0;
   font-size: 1.5em;
-  color: #2c2e35; /* Dark text for metric values */
+  color: #ffffff; /* White for metric values */
   font-weight: bold;
 }
 
@@ -286,33 +298,33 @@ code {
   border-collapse: collapse;
   margin-top: 20px;
   margin-bottom: 30px;
-  background-color: #0a0a0a;
+  background-color: #0f0f0f; /* Very dark grey for table background */
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid #1f1f1f;
+  border: 1px solid #2a2a2a;
   box-shadow: none;
 }
 
 .scores-table th, .operations-table th,
 .scores-table td, .operations-table td {
-  border: 1px solid #181818; /* Very dark border for cells */
+  border: 1px solid #222222; /* Dark border for cells */
   padding: 12px 15px;
   text-align: left;
 }
 
 .scores-table th, .operations-table th {
-  background-color: #151515; /* Darker header row */
-  color: #4a4b4f; /* Darker text for table headers */
+  background-color: #1a1a1a; /* Darker grey for header row */
+  color: #f0f0f0;            /* Light text for table headers */
   font-weight: bold;
 }
 
 .scores-table td, .operations-table td {
-  color: #3c3e45; /* Darker text for table cells */
+  color: #cccccc; /* Light grey for table cells */
 }
 
 .scores-table tbody tr:nth-child(even),
 .operations-table tbody tr:nth-child(even) {
-  background-color: #0f0f0f; /* Subtle striping, very dark */
+  background-color: #141414; /* Subtle striping, very dark */
 }
 
 .success-rate {
@@ -323,7 +335,7 @@ code {
 .progress-bar {
   width: 100px;
   height: 10px;
-  background-color: #252525; /* Darker track for progress bar */
+  background-color: #333333; /* Dark grey track */
   border-radius: 5px;
   overflow: hidden;
 }
@@ -331,10 +343,10 @@ code {
   height: 100%;
   border-radius: 5px;
 }
-/* Muted progress colors */
-.progress-fill.high { background-color: #2a5a3a; }   /* Muted green */
-.progress-fill.medium { background-color: #5a4a2a; } /* Muted yellow/orange */
-.progress-fill.low { background-color: #5a2a2a; }    /* Muted red */
+/* Brighter, distinct progress colors */
+.progress-fill.high { background-color: #4caf50; }   /* Green */
+.progress-fill.medium { background-color: #ffc107; } /* Yellow */
+.progress-fill.low { background-color: #f44336; }    /* Red */
 
 
 /* Loading, Error, No Data Messages */
@@ -347,28 +359,28 @@ code {
 }
 
 .loading {
-  background-color: #0f0f0f;
-  color: #444; /* Dark grey text */
-  border: 1px solid #252525;
+  background-color: #1a1a1a;
+  color: #bbbbbb; /* Light grey text */
+  border: 1px solid #333333;
 }
 
 .error-message {
-  background-color: #2a1f1f; /* Dark red-ish background */
-  color: #6a4a4a; /* Muted red text */
-  border: 1px solid #4a2f2f;
+  background-color: #422020; /* Dark red background */
+  color: #ffcccc;            /* Light red text */
+  border: 1px solid #683030;
 }
 
 .no-data, .no-miner-selected {
-  background-color: #0f0f0f;
-  color: #333; /* Very dark grey text */
-  border: 1px dashed #252525;
+  background-color: #1a1a1a;
+  color: #888888; /* Medium grey text */
+  border: 1px dashed #444444;
 }
 
 /* Auto Refresh Section */
 .auto-refresh {
   padding: 15px;
-  background-color: #030303; /* Extremely dark footer area */
-  border-top: 1px solid #1a1a1a;
+  background-color: #000000; /* Black footer area */
+  border-top: 1px solid #222222;
   margin-top: auto;
   display: flex;
   justify-content: center;
@@ -376,25 +388,25 @@ code {
   gap: 20px;
 }
 
+/* Refresh button style - like "VIEW RUN" */
 .refresh-button {
-  background-color: #181818; /* Very dark button */
-  color: #555;               /* Dark grey text */
-  border: 1px solid #282828;
+  background-color: #b0b0b0; /* Light grey background */
+  color: #000000;            /* Black text */
+  border: none;
   padding: 10px 20px;
   font-size: 1em;
   font-weight: bold;
   border-radius: 5px;
   cursor: pointer;
-  transition: background-color 0.3s;
-  font-family: inherit; /* Uses Montserrat */
+  transition: background-color 0.2s;
+  font-family: inherit;
 }
 
 .refresh-button:hover {
-  background-color: #222;
-  color: #666;
+  background-color: #c0c0c0; /* Slightly lighter on hover */
 }
 
 .last-updated {
   font-size: 0.9em;
-  color: #333; /* Very dark grey text */
+  color: #888888; /* Medium grey text */
 }
