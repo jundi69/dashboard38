@@ -258,7 +258,7 @@ export default function App() {
                 <div className="charts">
                   {/* All Miner Losses Chart */}
                   <div className="chart-container full-width">
-                    <h3>All Miner Losses <span className="epoch-indicator">Max Epoch {currentMaxEpoch}</span></h3>
+                    <h3>Miner Loss <span className="epoch-indicator">Outer Step {currentMaxEpoch}</span></h3>
                     {globalData?.all_miner_losses && Object.keys(globalData.all_miner_losses).length > 0 ? (
                       <ResponsiveContainer width="100%" height={350}>
                         <LineChart margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
@@ -291,7 +291,7 @@ export default function App() {
 
                   {/* All Miner Perplexities Chart */}
                   <div className="chart-container full-width">
-                    <h3>All Miner Perplexities <span className="epoch-indicator">Max Epoch {currentMaxEpoch}</span></h3>
+                    <h3>Miner Perplexity <span className="epoch-indicator">Outer Step {currentMaxEpoch}</span></h3>
                     {globalData?.all_miner_perplexities && Object.keys(globalData.all_miner_perplexities).length > 0 ? (
                       <ResponsiveContainer width="100%" height={350}>
                         <LineChart margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
@@ -455,6 +455,7 @@ export default function App() {
                             name="Loss"
                             strokeWidth={2}
                             activeDot={{ r: 8 }}
+                            dot={false}
                           />
                         </LineChart>
                       </ResponsiveContainer>
@@ -483,6 +484,7 @@ export default function App() {
                             name="Incentive"
                             strokeWidth={2}
                             activeDot={{ r: 8 }}
+                            dot={false}
                           />
                         </LineChart>
                       </ResponsiveContainer>
