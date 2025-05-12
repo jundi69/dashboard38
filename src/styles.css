@@ -117,6 +117,93 @@ code {
   padding-bottom: 10px;
 }
 
+.main-operations-table {
+  width: 100%;
+  border-collapse: collapse; /* Remove double borders */
+}
+
+.main-operations-table th,
+.main-operations-table td {
+  border-bottom: 1px solid #ddd; /* Lighter border */
+  padding: 8px 12px; /* Adjust padding */
+  text-align: left;
+}
+
+.main-operations-table th {
+  background-color: #f8f8f8; /* Light header background */
+}
+
+/* Style the expand button */
+.expand-button {
+  background: none;
+  border: 1px solid #ccc;
+  color: #555;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: bold;
+  line-height: 1; /* Ensure button size is consistent */
+}
+.expand-button:hover {
+  background-color: #eee;
+}
+
+/* Style the expanded row header slightly */
+.expanded-row-header {
+  background-color: #f0f5ff; /* Light blue background when expanded */
+}
+
+/* Style the container for the nested table */
+.validator-details-container {
+  padding: 15px;
+  background-color: #fdfdfd; /* Slightly off-white background for contrast */
+  border-top: 2px solid #add8e6; /* Light blue top border */
+  margin: 0; /* Remove margin if td padding is enough */
+}
+
+.validator-details-container h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+/* Style the nested validator details table */
+.validator-details-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em; /* Slightly smaller font */
+}
+
+.validator-details-table th,
+.validator-details-table td {
+  border: 1px solid #e0e0e0; /* Lighter borders for nested table */
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.validator-details-table th {
+  background-color: #f0f0f0; /* Even lighter header for nested table */
+}
+
+.validator-details-table tbody tr:nth-child(even) {
+  background-color: #fafafa; /* Zebra striping */
+}
+
+/* Optional: Smaller success rate display */
+.success-rate-small span {
+  font-size: 0.9em;
+}
+
+/* Ensure loading/error messages are centered or styled appropriately */
+.loading, .error-message, .no-data {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+.error-message {
+  color: #d9534f; /* Red color for errors */
+}
+
 /* Charts */
 .charts {
   display: grid;
