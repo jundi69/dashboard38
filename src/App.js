@@ -1,5 +1,5 @@
 // src/App.js
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, Fragment } from "react";
 import {
   LineChart,
   Line,
@@ -59,8 +59,6 @@ export default function App() {
   const [globalData, setGlobalData] = useState({
     all_miner_losses: {},
     all_miner_perplexities: {},
-    // global_average_loss_series: [], // We can derive average for display if needed, or plot all
-    // global_average_perplexity_series: [], // Same as above
     global_max_epoch_series: [],
     global_average_training_rate_series: [],
     global_total_bandwidth_series: [],
@@ -69,9 +67,10 @@ export default function App() {
   });
 
   const [miners, setMiners] = useState([]);
-  const [minerData, setMinerData] = useState(null); // Stays the same for individual miner
-  const [allReduceOperations, setAllReduceOperations] = useState([]); // Stays the same
-
+  const [minerData, setMinerData] = useState(null);
+  const [allReduceOperations, setAllReduceOperations] = useState([]);
+  const [expandedOpKey, setExpandedOpKey] = useState(null);
+  
   const fetchGlobalMetrics = useCallback(async () => {
     setLoading(prev => ({ ...prev, global: true }));
     setError(prev => ({ ...prev, global: null }));
@@ -80,7 +79,6 @@ export default function App() {
       setGlobalData({
         all_miner_losses: response.data.all_miner_losses || {},
         all_miner_perplexities: response.data.all_miner_perplexities || {},
-        // Assuming backend now provides these specific keys based on our last discussion
         global_max_epoch_series: response.data.global_max_epoch_series || [],
         global_average_training_rate_series: response.data.global_average_training_rate_series || [],
         global_total_bandwidth_series: response.data.global_total_bandwidth_series || [],
@@ -144,7 +142,10 @@ export default function App() {
     }
   }, []);
 
+  const getOpKey = (op) => `${op?.operation_id}-${op?.epoch}`;
+
   const fetchAllReduceOperations = useCallback(async () => {
+    setExpandedOpKey(null);
     setLoading(prev => ({ ...prev, allreduce: true }));
     setError(prev => ({ ...prev, allreduce: null }));
 
@@ -159,7 +160,6 @@ export default function App() {
       setLoading(prev => ({ ...prev, allreduce: false }));
     }
   }, []);
-
 
   useEffect(() => {
     if (activeTab === "global") {
