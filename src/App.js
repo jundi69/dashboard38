@@ -537,128 +537,199 @@ export default function App() {
         )}
 
         {activeTab === "allreduce" && (
-          // ... AllReduce Operations JSX (remains the same as your provided code) ...
           <div className="allreduce-operations">
             <h2>AllReduce Operations</h2>
-            
+
             {loading.allreduce ? (
               <div className="loading">Loading AllReduce operations...</div>
             ) : error.allreduce ? (
               <div className="error-message">{error.allreduce}</div>
             ) : (
               <>
+                {/* Main Operations Table */}
                 <div className="operations-table-container">
-                  <h3>Recent Operations</h3>
+                  <h3>Recent Operations Log</h3>
                   {allReduceOperations.length > 0 ? (
-                    <table className="operations-table">
+                    <table className="operations-table main-operations-table"> {/* Added main-operations-table class */}
                       <thead>
                         <tr>
-                          <th>Time</th>
+                          <th style={{ width: '30px' }}></th> {/* Expand Column */}
+                          <th>Operation ID</th>
                           <th>Epoch</th>
-                          <th>Duration (s)</th>
-                          <th>Miners</th>
-                          <th>Success Rate</th>
-                          <th>Bandwidth (MB/s)</th>
+                          <th>Time (Earliest Report)</th>
+                          <th>Reporting Validators</th>
+                          {/* Optional: Add columns for Avg Duration / Avg Success Rate */}
                         </tr>
                       </thead>
                       <tbody>
-                        {allReduceOperations.map((op) => (
-                          <tr key={op?.operation_id || Math.random()}>
-                            <td>{op?.time ? new Date(op.time).toLocaleString() : 'N/A'}</td>
-                            <td>{op?.epoch || 'N/A'}</td>
-                            <td>{op?.metrics?.duration?.toFixed(2) || 'N/A'}</td>
-                            <td>{op?.metrics?.participating_miners || 'N/A'}</td>
-                            <td>
-                              {op?.metrics?.success_rate != null ? (
-                                <div className="success-rate">
-                                  <div className="progress-bar">
-                                    <div 
-                                      className={`progress-fill ${
-                                        op.metrics.success_rate >= 0.9 ? 'high' : 
-                                        op.metrics.success_rate >= 0.7 ? 'medium' : 'low'
-                                      }`} 
-                                      style={{ width: `${op.metrics.success_rate * 100}%` }}
-                                    ></div>
-                                  </div>
-                                  <span>{(op.metrics.success_rate * 100).toFixed(1)}%</span>
-                                </div>
-                              ) : 'N/A'}
-                            </td>
-                            <td>{op?.metrics?.bandwidth?.toFixed(2) || 'N/A'}</td>
-                          </tr>
-                        ))}
+                        {allReduceOperations.map((op) => {
+                          const currentOpKey = getOpKey(op);
+                          const isExpanded = expandedOpKey === currentOpKey;
+
+                          // --- Calculate Averages for display or charts (Optional) ---
+                          let avgDuration = null;
+                          let avgSuccessRate = null;
+                          let totalBandwidth = null;
+                          if (op.validator_reports && op.validator_reports.length > 0) {
+                              const validDurations = op.validator_reports.map(r => r.metrics?.duration).filter(d => d != null);
+                              const validRates = op.validator_reports.map(r => r.metrics?.success_rate).filter(r => r != null);
+                              const validBandwidths = op.validator_reports.map(r => r.metrics?.bandwidth).filter(b => b != null);
+                              
+                              if (validDurations.length > 0) {
+                                  avgDuration = validDurations.reduce((sum, d) => sum + d, 0) / validDurations.length;
+                              }
+                              if (validRates.length > 0) {
+                                  avgSuccessRate = validRates.reduce((sum, r) => sum + r, 0) / validRates.length;
+                              }
+                              if (validBandwidths.length > 0) {
+                                  totalBandwidth = validBandwidths.reduce((sum, b) => sum + b, 0);
+                              }
+                          }
+                          // --- End Average Calculation ---
+
+                          return (
+                            <Fragment key={currentOpKey}>
+                              {/* Main Row */}
+                              <tr className={isExpanded ? 'expanded-row-header' : ''}>
+                                <td>
+                                  <button
+                                    className="expand-button"
+                                    onClick={() => setExpandedOpKey(isExpanded ? null : currentOpKey)}
+                                    aria-expanded={isExpanded}
+                                    aria-controls={`details-${currentOpKey}`} // For accessibility
+                                  >
+                                    {isExpanded ? '−' : '+'}
+                                  </button>
+                                </td>
+                                <td>{op.operation_id || 'N/A'}</td>
+                                <td>{op.epoch || 'N/A'}</td>
+                                <td>{op.representative_time ? formatFullDate(op.representative_time) : 'N/A'}</td>
+                                <td>{op.validator_reports?.length || 0}</td>
+                                {/* Optional: Display averages <td>{avgDuration?.toFixed(2) || 'N/A'}</td> */}
+                              </tr>
+
+                              {/* Expanded Row (Conditional) */}
+                              {isExpanded && (
+                                <tr className="expanded-row-content">
+                                  {/* Note the colSpan should match the number of columns in the THEAD above */}
+                                  <td colSpan="5">
+                                    <div id={`details-${currentOpKey}`} className="validator-details-container">
+                                      <h4>Validator Reports for Operation {op.operation_id} (Epoch {op.epoch})</h4>
+                                      {op.validator_reports && op.validator_reports.length > 0 ? (
+                                        <table className="validator-details-table">
+                                          <thead>
+                                            <tr>
+                                              <th>Validator UID</th>
+                                              <th>Report Time</th>
+                                              <th>Duration (s)</th>
+                                              <th>Success Rate</th>
+                                              <th>Bandwidth (MB/s)</th>
+                                              <th>Miner Count</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {op.validator_reports.map(report => (
+                                              <tr key={report.validator_uid}>
+                                                <td>{report.validator_uid}</td>
+                                                <td>{report.time ? formatFullDate(report.time) : 'N/A'}</td>
+                                                <td>{report.metrics?.duration?.toFixed(2) ?? 'N/A'}</td>
+                                                <td>
+                                                  {report.metrics?.success_rate != null ? (
+                                                    <div className="success-rate-small"> {/* Optional: smaller styling */}
+                                                     {/* You can add back the progress bar here if desired, using report.metrics.success_rate */}
+                                                     <span>{(report.metrics.success_rate * 100).toFixed(1)}%</span>
+                                                    </div>
+                                                  ) : 'N/A'}
+                                                </td>
+                                                <td>{report.metrics?.bandwidth?.toFixed(2) ?? 'N/A'}</td>
+                                                {/* Ensure field name matches backend: participating_miners_count */}
+                                                <td>{report.metrics?.participating_miners_count ?? 'N/A'}</td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      ) : (
+                                         <div className="no-data">No detailed validator reports for this operation.</div>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </Fragment>
+                          );
+                        })}
                       </tbody>
                     </table>
                   ) : (
                     <div className="no-data">No AllReduce operations recorded</div>
                   )}
                 </div>
-                
+
+                {/* Charts - Updated to use calculated averages */}
                 {allReduceOperations.length > 0 ? (
                   <div className="charts">
+                    {/* Success Rate Trend Chart (Using Average) */}
                     <div className="chart-container">
-                      <h3>Success Rate Trend</h3>
+                      <h3>Avg Success Rate Trend</h3>
                       <ResponsiveContainer width="100%" height={300}>
-                        <LineChart 
-                          data={allReduceOperations.slice().reverse().map(op => ({
-                            time: op?.time || new Date().toISOString(),
-                            value: op?.metrics?.success_rate || 0
-                          }))}
+                        <LineChart
+                          data={allReduceOperations
+                            .map(op => {
+                              // Recalculate average success rate for chart data
+                              let avgSuccessRate = null;
+                              if (op.validator_reports && op.validator_reports.length > 0) {
+                                const validRates = op.validator_reports.map(r => r.metrics?.success_rate).filter(r => r != null);
+                                if (validRates.length > 0) {
+                                    avgSuccessRate = validRates.reduce((sum, r) => sum + r, 0) / validRates.length;
+                                }
+                              }
+                              return {
+                                time: op.representative_time || new Date().toISOString(),
+                                value: avgSuccessRate // Use calculated average
+                              };
+                            })
+                            .filter(item => item.value != null) // Filter out ops with no valid rate
+                            .slice().reverse()} // Reverse for chronological display
                         >
                           <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis 
-                            dataKey="time" 
-                            tickFormatter={formatTime}
-                          />
-                          <YAxis 
-                            domain={[0, 1]}
-                            tickFormatter={(value) => `${(value * 100).toFixed(0)}%`}
-                          />
-                          <Tooltip 
-                            labelFormatter={formatFullDate}
-                            formatter={(value) => [`${(value * 100).toFixed(1)}%`, 'Success Rate']} 
-                          />
+                          <XAxis dataKey="time" tickFormatter={formatTime} />
+                          <YAxis domain={[0, 1]} tickFormatter={(value) => `${(value * 100).toFixed(0)}%`} />
+                          <Tooltip labelFormatter={formatFullDate} formatter={(value) => [`${(value * 100).toFixed(1)}%`, 'Avg Success Rate']} />
                           <Legend />
-                          <Line 
-                            type="monotone" 
-                            dataKey="value" 
-                            stroke="#00bcd4" 
-                            name="Success Rate"
-                            strokeWidth={2}
-                            activeDot={{ r: 8 }}
-                          />
+                          <Line type="monotone" dataKey="value" stroke="#00bcd4" name="Avg Success Rate" strokeWidth={2} dot={false} activeDot={{ r: 8 }} />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
-                    
+
+                    {/* Duration Trend Chart (Using Average) */}
                     <div className="chart-container">
-                      <h3>AllReduce Duration</h3>
-                      <ResponsiveContainer width="100%" height={300}>
-                        <LineChart 
-                          data={allReduceOperations.slice().reverse().map(op => ({
-                            time: op?.time || new Date().toISOString(),
-                            value: op?.metrics?.duration || 0
-                          }))}
+                      <h3>Avg AllReduce Duration</h3>
+                       <ResponsiveContainer width="100%" height={300}>
+                        <LineChart
+                          data={allReduceOperations
+                            .map(op => {
+                              // Recalculate average duration for chart data
+                              let avgDuration = null;
+                              if (op.validator_reports && op.validator_reports.length > 0) {
+                                const validDurations = op.validator_reports.map(r => r.metrics?.duration).filter(d => d != null);
+                                if (validDurations.length > 0) {
+                                    avgDuration = validDurations.reduce((sum, d) => sum + d, 0) / validDurations.length;
+                                }
+                              }
+                              return {
+                                time: op.representative_time || new Date().toISOString(),
+                                value: avgDuration // Use calculated average
+                              };
+                            })
+                            .filter(item => item.value != null) // Filter out ops with no valid duration
+                            .slice().reverse()} // Reverse for chronological display
                         >
                           <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis 
-                            dataKey="time" 
-                            tickFormatter={formatTime}
-                          />
+                          <XAxis dataKey="time" tickFormatter={formatTime} />
                           <YAxis />
-                          <Tooltip 
-                            labelFormatter={formatFullDate}
-                            formatter={(value) => [value.toFixed(2), 'Seconds']} 
-                          />
+                          <Tooltip labelFormatter={formatFullDate} formatter={(value) => [value.toFixed(2), 'Avg Seconds']} />
                           <Legend />
-                          <Line 
-                            type="monotone" 
-                            dataKey="value" 
-                            stroke="#ff5722" 
-                            name="Duration"
-                            strokeWidth={2}
-                            activeDot={{ r: 8 }}
-                          />
+                          <Line type="monotone" dataKey="value" stroke="#ff5722" name="Avg Duration" strokeWidth={2} dot={false} activeDot={{ r: 8 }} />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
