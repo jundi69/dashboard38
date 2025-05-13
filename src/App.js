@@ -277,132 +277,118 @@ export default function App() {
         {activeTab === "global" && (
           <div className="global-view">
             <h2>Global Training Overview</h2> {/* Updated Title */}
-            <div className="map-container full-width" style={{ marginTop: '20px', marginBottom: '30px', border: '1px solid #eee', borderRadius: '8px', padding: '10px' }}>
-               <h3>Global Miner Network Distribution</h3>
-               {loading.locations ? (
-                 <div className="loading" style={{ textAlign: 'center', padding: '20px' }}>Loading map data...</div>
-               ) : error.locations ? (
-                 <div className="error-message" style={{ textAlign: 'center', padding: '20px' }}>{error.locations}</div>
-               ) : minerLocations.length > 0 ? (
-                 <GlobalNetworkMap locations={minerLocations} />
-               ) : (
-                 <div className="no-data" style={{ textAlign: 'center', padding: '20px' }}>No miner location data available to display on map.</div>
-               )}
-             </div>
+            <div className="map-and-stats-row"> {/* New parent container */}
+              
+              {/* Column 1: Map */}
+              <div className="map-column">
+                {loading.locations ? (
+                  <div className="loading" style={{ textAlign: 'center', padding: '20px' }}>Loading map data...</div>
+                ) : error.locations ? (
+                  <div className="error-message" style={{ textAlign: 'center', padding: '20px' }}>{error.locations}</div>
+                ) : minerLocations.length > 0 ? (
+                  // Pass a specific height to the map component or style its container
+                  <GlobalNetworkMap locations={minerLocations} mapHeight="350px" />
+                ) : (
+                  <div className="no-data" style={{ textAlign: 'center', padding: '20px', height: '350px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1A202C' /* Dark bg for empty state */, color: '#A0AEC0' }}>
+                    No miner location data.
+                  </div>
+                )}
+              </div>
+
+              {/* Column 2: Stats Overview Cards */}
+              <div className="stats-column">
+                {/* Stats Overview Cards - these will stack vertically here */}
+                <div className="stat-overview-card">
+                  <div className="stat-icon bandwidth-icon">📶</div>
+                  <div className="stat-content">
+                    <h3>Global Bandwidth (Total)</h3>
+                    <p className="stat-value">
+                      {latestTotalBandwidth !== "0" ? `${latestTotalBandwidth} MB/s` : "No data"}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="stat-overview-card">
+                  <div className="stat-icon tokens-icon">🚀</div>
+                  <div className="stat-content">
+                    <h3>Global Training Rate (Avg)</h3>
+                    <p className="stat-value">
+                      {latestAvgTrainingRate !== "0" ? `${latestAvgTrainingRate} tok/s` : "No data"}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="stat-overview-card">
+                  <div className="stat-icon miners-icon">👨‍💻</div>
+                  <div className="stat-content">
+                    <h3>Active Miners</h3>
+                    <p className="stat-value">
+                      {activeMinersCurrentCount}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
             {loading.global ? (
-              <div className="loading">Loading global metrics...</div>
+              <div className="loading" style={{ marginTop: '20px'}}>Loading global metrics...</div>
             ) : error.global ? (
-              <div className="error-message">{error.global}</div>
+              <div className="error-message" style={{ marginTop: '20px'}}>{error.global}</div>
             ) : (
-              <>
-                <div className="charts">
-                  {/* All Miner Losses Chart */}
-                  <div className="chart-container full-width">
-                    <h3>Miner Loss <span className="epoch-indicator">Outer Step {currentMaxEpoch}</span></h3>
-                    {globalData?.all_miner_losses && Object.keys(globalData.all_miner_losses).length > 0 ? (
-                      <ResponsiveContainer width="100%" height={350}>
-                        <LineChart margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="time" type="category" allowDuplicatedCategory={false} tickFormatter={formatTime} />
-                          <YAxis />
-                          <Tooltip labelFormatter={formatFullDate} />
-                          <Legend />
-                          {Object.entries(globalData.all_miner_losses).map(([minerUid, lossData], index) => (
-                            lossData && lossData.length > 0 && (
-                              <Line
-                                key={`loss-${minerUid}`}
-                                type="monotone"
-                                data={lossData}
-                                dataKey="value"
-                                name={`Miner ${minerUid} Loss`}
-                                stroke={MINER_COLORS[index % MINER_COLORS.length]}
-                                strokeWidth={1.5}
-                                dot={false}
-                                activeDot={{ r: 5 }}
-                              />
-                            )
-                          ))}
-                        </LineChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="no-data">No miner loss data available</div>
-                    )}
-                  </div>
-
-                  {/* All Miner Perplexities Chart */}
-                  <div className="chart-container full-width">
-                    <h3>Miner Perplexity <span className="epoch-indicator">Outer Step {currentMaxEpoch}</span></h3>
-                    {globalData?.all_miner_perplexities && Object.keys(globalData.all_miner_perplexities).length > 0 ? (
-                      <ResponsiveContainer width="100%" height={350}>
-                        <LineChart margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="time" type="category" allowDuplicatedCategory={false} tickFormatter={formatTime} />
-                          <YAxis />
-                          <Tooltip labelFormatter={formatFullDate}/>
-                          <Legend />
-                          {Object.entries(globalData.all_miner_perplexities).map(([minerUid, perplexityData], index) => (
-                            perplexityData && perplexityData.length > 0 && (
-                              <Line
-                                key={`perplexity-${minerUid}`}
-                                type="monotone"
-                                data={perplexityData}
-                                dataKey="value"
-                                name={`Miner ${minerUid} Perplexity`}
-                                stroke={MINER_COLORS[index % MINER_COLORS.length]}
-                                strokeWidth={1.5}
-                                dot={false}
-                                activeDot={{ r: 5 }}
-                              />
-                            )
-                          ))}
-                        </LineChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="no-data">No miner perplexity data available</div>
-                    )}
-                  </div>
+              <div className="charts-row"> {/* Parent for side-by-side charts */}
+                {/* All Miner Losses Chart */}
+                <div className="chart-container half-width"> {/* half-width class for styling */}
+                  <h3>Miner Loss <span className="epoch-indicator">Outer Step {currentMaxEpoch}</span></h3>
+                  {globalData?.all_miner_losses && Object.keys(globalData.all_miner_losses).length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}> {/* Adjusted height */}
+                      <LineChart margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="time" type="category" allowDuplicatedCategory={false} tickFormatter={formatTime} />
+                        <YAxis />
+                        <Tooltip labelFormatter={formatFullDate} />
+                        <Legend />
+                        {Object.entries(globalData.all_miner_losses).map(([minerUid, lossData], index) => (
+                          lossData && lossData.length > 0 && (
+                            <Line
+                              key={`loss-${minerUid}`} type="monotone" data={lossData} dataKey="value"
+                              name={`Miner ${minerUid} Loss`} stroke={MINER_COLORS[index % MINER_COLORS.length]}
+                              strokeWidth={1.5} dot={false} activeDot={{ r: 5 }}
+                            />
+                          )
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="no-data">No miner loss data</div>
+                  )}
                 </div>
 
-                {/* Updated Stats Overview Cards */}
-                <div className="stats-overview">
-                  <div className="stat-overview-card">
-                    <div className="stat-icon bandwidth-icon">📶</div>
-                    <div className="stat-content">
-                      <h3>Global Bandwidth (Total)</h3> {/* Clarified title */}
-                      <p className="stat-value">
-                        {latestTotalBandwidth !== "0" ? `${latestTotalBandwidth} MB/s` : "No data"}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="stat-overview-card">
-                    <div className="stat-icon tokens-icon">🚀</div>
-                    <div className="stat-content">
-                      <h3>Global Training Rate (Avg)</h3> {/* Clarified title */}
-                      <p className="stat-value">
-                        {latestAvgTrainingRate !== "0" ? `${latestAvgTrainingRate} tok/s` : "No data"}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="stat-overview-card">
-                    <div className="stat-icon miners-icon">👨‍💻</div>
-                    <div className="stat-content">
-                      <h3>Active Miners</h3>
-                      <p className="stat-value">
-                        {activeMinersCurrentCount}
-                      </p>
-                    </div>
-                  </div>
+                {/* All Miner Perplexities Chart */}
+                <div className="chart-container half-width"> {/* half-width class for styling */}
+                  <h3>Miner Perplexity <span className="epoch-indicator">Outer Step {currentMaxEpoch}</span></h3>
+                  {globalData?.all_miner_perplexities && Object.keys(globalData.all_miner_perplexities).length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}> {/* Adjusted height */}
+                      <LineChart margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="time" type="category" allowDuplicatedCategory={false} tickFormatter={formatTime} />
+                        <YAxis />
+                        <Tooltip labelFormatter={formatFullDate}/>
+                        <Legend />
+                        {Object.entries(globalData.all_miner_perplexities).map(([minerUid, perplexityData], index) => (
+                          perplexityData && perplexityData.length > 0 && (
+                            <Line
+                              key={`perplexity-${minerUid}`} type="monotone" data={perplexityData} dataKey="value"
+                              name={`Miner ${minerUid} Perplexity`} stroke={MINER_COLORS[index % MINER_COLORS.length]}
+                              strokeWidth={1.5} dot={false} activeDot={{ r: 5 }}
+                            />
+                          )
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="no-data">No miner perplexity data</div>
+                  )}
                 </div>
-
-                {/* Removed the smaller "stats" div as requested */}
-                {/* 
-                <div className="stats">
-                  // ... old stat cards for Current Epoch, Current Loss, Perplexity ...
-                </div>
-                */}
-              </>
+              </div>
             )}
           </div>
         )}

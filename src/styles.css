@@ -106,7 +106,10 @@ code {
   flex-grow: 1;
 }
 
-.global-view h2,
+.global-view h2 {
+  margin-bottom: 20px;
+}
+
 .miner-explorer h2,
 .allreduce-operations h2 {
   color: #ffffff; /* White for section titles */
@@ -278,6 +281,29 @@ code {
   background-color: #c0c0c0;
 }
 
+.charts-row {
+  display: flex;
+  flex-wrap: wrap; /* Allow charts to stack on smaller screens */
+  gap: 20px; /* Space between the two charts */
+  margin-top: 20px; /* Ensure some space if global metrics are still loading/error */
+}
+
+.chart-container.half-width { /* Applied to loss and perplexity chart containers */
+  flex: 1; /* Each chart takes equal space */
+  min-width: 300px; /* Minimum width for readability */
+  background-color: #1A202C; /* Dark background for chart cards */
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.chart-container.half-width h3 {
+    margin-top: 0;
+    color: #CBD5E0; /* Lighter text for chart titles */
+}
+.chart-container.half-width .no-data {
+    color: #A0AEC0;
+}
+
 
 /* Recharts specific dark mode overrides (texts, lines) */
 .recharts-legend-item-text {
@@ -313,20 +339,49 @@ code {
   margin-bottom: 30px;
 }
 
+/* Row for Map and Stats Cards */
+.map-and-stats-row {
+  display: flex;
+  flex-wrap: wrap; /* Allow wrapping on smaller screens if necessary */
+  gap: 20px; /* Space between map column and stats column */
+  margin-bottom: 30px; /* Space before the next row of charts */
+}
+
+.map-column {
+  flex: 3; /* Map takes more space */
+  min-width: 300px; /* Minimum width before wrapping or shrinking too much */
+  /* The map component itself will define its background and appearance */
+}
+.map-column h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 1.2em; /* Slightly smaller title for this section */
+}
+
+.stats-column {
+  flex: 1; /* Stats cards take less space */
+  display: flex;
+  flex-direction: column;
+  gap: 15px; /* Space between individual stat cards */
+  min-width: 250px;
+}
+
 .stat-overview-card {
-  background-color: #0f0f0f; /* Consistent with chart-container */
-  padding: 20px;
+  background-color: #2D3748; /* Example dark theme card background */
+  color: #E2E8F0; /* Example dark theme text color */
+  padding: 15px;
   border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   display: flex;
   align-items: center;
-  gap: 15px;
-  border: 1px solid #2a2a2a;
-  box-shadow: none;
 }
 
 .stat-icon {
-  font-size: 2.5em;
-  color: #888888; /* Medium grey for icons */
+  font-size: 2em;
+  margin-right: 15px;
+  padding: 5px;
+  border-radius: 50%;
+  background-color: rgba(255,255,255,0.1);
 }
 /* More distinct icon colors, but still desaturated for the theme */
 .bandwidth-icon { color: #6c99bb; } /* Muted blue */
