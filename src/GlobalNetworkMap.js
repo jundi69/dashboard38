@@ -114,16 +114,6 @@ const GlobalNetworkMap = ({ locations }) => {
     return Array.from(aggregation.values());
   }, [originalData]);
 
-  const data = React.useMemo(() => {
-    if (!locations || locations.length === 0) return [];
-    return locations.map(loc => ({
-      position: [loc.lon, loc.lat],
-      uid: loc.uid,
-      city: loc.city,
-      country: loc.country,
-    }));
-  }, [locations]);
-
   const scatterplotLayer = new ScatterplotLayer({
     id: 'scatterplot-layer',
     data: aggregatedData, // USE AGGREGATED DATA HERE
@@ -202,11 +192,12 @@ const GlobalNetworkMap = ({ locations }) => {
   // }, [locations, data, lineData]);
 
 
-  if (data.length === 0 && locations && locations.length > 0) {
-      return <div className="no-data">Location data found, but could not be processed. Check lat/lon.</div>
-  }
   if (!locations || locations.length === 0) {
-    return <div className="no-data" style={{padding: "20px", textAlign: "center"}}>No location data available.</div>;
+    return <div className="no-data" style={{padding: "20px", textAlign: "center"}}>No location data input.</div>;
+  }
+  if (!aggregatedData || aggregatedData.length === 0) {
+    // This implies locations were provided, but processing (e.g., due to invalid lat/lon) resulted in no valid points.
+    return <div className="no-data" style={{padding: "20px", textAlign: "center"}}>Location data provided, but no valid points to display. Check lat/lon values.</div>;
   }
 
   const layers = [
