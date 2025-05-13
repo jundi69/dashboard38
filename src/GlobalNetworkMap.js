@@ -37,7 +37,7 @@ const Legend = () => {
       fontFamily: 'monospace',
       border: '1px solid #204060'
     }}>
-      <div><span style={{height: '10px', width: '10px', backgroundColor: 'rgba(255, 107, 35, 0.8)', borderRadius: '50%', display: 'inline-block', marginRight: '5px'}}></span> Miner Location</div>
+      <div><span style={{height: '10px', width: '10px', backgroundColor: 'rgba(255, 107, 35, 0.8)', borderRadius: '50%', display: 'inline-block', marginRight: '5px'}}></span> Miner Location (dot size indicates density)</div>
       <div style={{marginTop: '5px', color: '#A0A0A0'}}>Lines show connections</div>
     </div>
   );
@@ -76,6 +76,43 @@ const GlobalNetworkMap = ({ locations }) => {
   });
   // --- End Option B ---
 
+  const originalData = React.useMemo(() => {
+    if (!locations || locations.length === 0) return [];
+    return locations.map(loc => ({
+      position: [loc.lon, loc.lat],
+      uid: loc.uid,
+      city: loc.city,
+      country: loc.country,
+    }));
+  }, [locations]);
+  
+  // This 'aggregatedData' is for the scatterplot dots to show density at a point
+  const aggregatedData = React.useMemo(() => {
+    if (!originalData || originalData.length === 0) return [];
+  
+    const aggregation = new Map(); // Use a Map for easy keying by "lon,lat"
+  
+    originalData.forEach(point => {
+      // Ensure position is valid before creating a key
+      if (Array.isArray(point.position) && point.position.length === 2 && !point.position.some(isNaN)) {
+        const key = `${point.position[0].toFixed(5)},${point.position[1].toFixed(5)}`; // Key by lon,lat (rounded)
+        if (!aggregation.has(key)) {
+          aggregation.set(key, {
+            position: point.position,
+            count: 0,
+            uids: [],
+            // Keep first city/country for tooltip, or combine them
+            city: point.city,
+            country: point.country,
+          });
+        }
+        const aggPoint = aggregation.get(key);
+        aggPoint.count += 1;
+        aggPoint.uids.push(point.uid);
+      }
+    });
+    return Array.from(aggregation.values());
+  }, [originalData]);
 
   const data = React.useMemo(() => {
     if (!locations || locations.length === 0) return [];
@@ -89,46 +126,63 @@ const GlobalNetworkMap = ({ locations }) => {
 
   const scatterplotLayer = new ScatterplotLayer({
     id: 'scatterplot-layer',
-    data,
-    pickable: false, // Disabled picking for simplicity
+    data: aggregatedData, // USE AGGREGATED DATA HERE
+    pickable: false, // Set to true if you want tooltips for aggregated points
     opacity: 0.9,
     stroked: true,
     filled: true,
-    radiusScale: 6,
+    // radiusScale: 6, // Can be dynamic based on count too
     radiusMinPixels: 3,
-    radiusMaxPixels: 7,
+    radiusMaxPixels: 20, // Allow larger dots for high counts
     lineWidthMinPixels: 1,
     getPosition: d => d.position,
-    getFillColor: [255, 107, 35, 220], // Orange, slightly more opaque
-    getLineColor: [255, 255, 255, 150], // White outline
+    getFillColor: [255, 107, 35, 220],
+    getLineColor: [255, 255, 255, 150],
+    getRadius: d => 2 + Math.sqrt(d.count) * 3, // Vary radius by count (sqrt for less extreme scaling)
+    // Optional: onHover for tooltips showing count and UIDs
+    onHover: ({object, x, y}) => {
+      const el = document.getElementById('deckgl-tooltip'); // You'd need a tooltip div
+      if (object && el) {
+        el.style.display = 'block';
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+        el.innerHTML = `Location: ${object.city || 'N/A'}, ${object.country || 'N/A'}<br/>Miners: ${object.count}<br/>UIDs: ${object.uids.slice(0,5).join(', ')}${object.uids.length > 5 ? '...' : ''}`;
+      } else if (el) {
+        el.style.display = 'none';
+      }
+    }
   });
 
   const lineData = React.useMemo(() => {
     const lines = [];
-    const maxPointsForFullMesh = 25; // Increased slightly, adjust as needed
-    if (data.length > 1 && data.length <= maxPointsForFullMesh) {
-      for (let i = 0; i < data.length; i++) {
-        for (let j = i + 1; j < data.length; j++) {
-          lines.push({
-            sourcePosition: data[i].position,
-            targetPosition: data[j].position,
-          });
+    if (originalData && originalData.length > 1) { // Use originalData here
+      const maxPointsForMesh = 30;
+      if (originalData.length <= maxPointsForMesh) {
+        for (let i = 0; i < originalData.length; i++) {
+          for (let j = i + 1; j < originalData.length; j++) {
+            if (Array.isArray(originalData[i].position) && originalData[i].position.length === 2 &&
+                Array.isArray(originalData[j].position) && originalData[j].position.length === 2 &&
+                !originalData[i].position.some(isNaN) && !originalData[j].position.some(isNaN) ) {
+              lines.push({
+                sourcePosition: originalData[i].position,
+                targetPosition: originalData[j].position,
+              });
+            }
+          }
         }
       }
-    } else if (data.length > maxPointsForFullMesh) {
-      // console.warn(`Too many nodes (${data.length}) for full mesh connection display.`);
     }
-    // console.log("Generated lineData count:", lines.length); // For debugging
     return lines;
-  }, [data]);
+  }, [originalData]);
 
   const connectionLayer = new LineLayer({
     id: 'connection-layer',
-    data: lineData,
+    data: lineData, // Ensure this is receiving the generated lines
     getSourcePosition: d => d.sourcePosition,
     getTargetPosition: d => d.targetPosition,
-    getColor: [200, 200, 200, 100], // Brighter, more opaque lines: RGBA (was 50 alpha)
-    getWidth: 1.2,                   // Slightly thicker lines (was 1 or 0.5)
+    getColor: [220, 220, 220, 120], // Brighter, slightly more opaque: (was [200,200,200,100])
+    getWidth: 1.5,                   // Slightly thicker (was 1.2)
+    widthUnits: 'pixels',            // Ensure width is in pixels
     pickable: false,
   });
 
@@ -175,6 +229,7 @@ const GlobalNetworkMap = ({ locations }) => {
         initialViewState={INITIAL_VIEW_STATE}
         controller={false} // <<< COMPLETELY DISABLE DECKGL CONTROLLER FOR NO INTERACTION
         layers={layers}
+        style={{ cursor: 'default' }}
         // getTooltip={false} // Disable tooltips
       >
         <Map
