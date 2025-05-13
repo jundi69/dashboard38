@@ -7,9 +7,9 @@ import { HexagonLayer } from '@deck.gl/aggregation-layers';
 import { LineLayer } from '@deck.gl/layers'; // You might want to remove this if focusing on the hexbin aesthetic
 
 // Option 1: A very dark base map style
-const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json';
+// const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json';
 // Option 2: If you want to try a completely blank style (might require custom MapLibre style JSON)
-// const MAP_STYLE = { version: 8, sources: {}, layers: [{ id: 'background', type: 'background', paint: {'background-color': '#000000' }}] };
+const MAP_STYLE = { version: 8, sources: {}, layers: [{ id: 'background', type: 'background', paint: {'background-color': '#000000' }}] };
 
 
 const GlobalNetworkMap = ({ locations }) => {
