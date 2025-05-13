@@ -153,6 +153,34 @@ code {
   background-color: #f0f5ff; /* Light blue background when expanded */
 }
 
+.map-container {
+  background-color: #f9f9f9; /* Light background for the map area */
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  /* Ensure full-width is applied if it's not already doing this */
+}
+
+.map-container h3 {
+  margin-top: 0;
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 10px;
+}
+
+/* Tooltip styling is handled by Deck.gl's getTooltip, 
+   but if you were to use a custom div: */
+.deckgl-tooltip {
+  background: white;
+  color: black;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  max-width: 250px;
+  pointer-events: none; /* Important for map interaction */
+  z-index: 1000;
+}
+
 /* Style the container for the nested table */
 .validator-details-container {
   padding: 15px;

@@ -14,6 +14,8 @@ import {
 } from "recharts";
 import "./styles.css";
 import axios from "axios";
+import 'maplibre-gl/dist/maplibre-gl.css';
+import GlobalNetworkMap from './GlobalNetworkMap';
 
 const API_BASE_URL = process.env.REACT_APP_FASTAPI_URL || "http://localhost:8000"; // Ensure your .env uses REACT_APP_ prefix or Vite's VITE_ prefix
 
@@ -46,13 +48,15 @@ export default function App() {
     global: false,
     miners: false,
     minerData: false,
-    allreduce: false
+    allreduce: false,
+    locations: false,
   });
   const [error, setError] = useState({
     global: null,
     miners: null,
     minerData: null,
-    allreduce: null
+    allreduce: null,
+    locations: null,
   });
 
   // Updated globalData state structure
@@ -70,7 +74,8 @@ export default function App() {
   const [minerData, setMinerData] = useState(null);
   const [allReduceOperations, setAllReduceOperations] = useState([]);
   const [expandedOpKey, setExpandedOpKey] = useState(null);
-  
+  const [minerLocations, setMinerLocations] = useState([]);
+
   const fetchGlobalMetrics = useCallback(async () => {
     setLoading(prev => ({ ...prev, global: true }));
     setError(prev => ({ ...prev, global: null }));
@@ -103,7 +108,7 @@ export default function App() {
   }, []);
 
   // fetchMiners, fetchMinerData, fetchAllReduceOperations remain the same
-    const fetchMiners = useCallback(async () => {
+  const fetchMiners = useCallback(async () => {
     setLoading(prev => ({ ...prev, miners: true }));
     setError(prev => ({ ...prev, miners: null }));
 
@@ -160,12 +165,36 @@ export default function App() {
       setLoading(prev => ({ ...prev, allreduce: false }));
     }
   }, []);
+  
+  const fetchMinerLocations = useCallback(async () => {
+    setLoading(prev => ({ ...prev, locations: true }));
+    setError(prev => ({ ...prev, locations: null }));
+    try {
+      const response = await axios.get(`${API_BASE_URL}/locations/miners`);
+      // Filter for valid lat/lon to prevent map errors
+      const validLocations = Array.isArray(response.data)
+        ? response.data.filter(loc =>
+            typeof loc.lat === 'number' && typeof loc.lon === 'number' &&
+            !isNaN(loc.lat) && !isNaN(loc.lon)
+          )
+        : [];
+      setMinerLocations(validLocations);
+    } catch (err) {
+      console.error("Error fetching miner locations:", err);
+      setError(prev => ({ ...prev, locations: "Could not load miner locations." }));
+      setMinerLocations([]);
+    } finally {
+      setLoading(prev => ({ ...prev, locations: false }));
+    }
+  }, []);
+
 
   useEffect(() => {
     if (activeTab === "global") {
       fetchGlobalMetrics();
+      fetchMinerLocations();
     }
-  }, [activeTab, fetchGlobalMetrics]);
+  }, [activeTab, fetchGlobalMetrics, fetchMinerLocations]);
 
   useEffect(() => {
     if (activeTab === "miners") {
@@ -248,7 +277,18 @@ export default function App() {
         {activeTab === "global" && (
           <div className="global-view">
             <h2>Global Training Overview</h2> {/* Updated Title */}
-            
+            <div className="map-container full-width" style={{ marginTop: '20px', marginBottom: '30px', border: '1px solid #eee', borderRadius: '8px', padding: '10px' }}>
+               <h3>Global Miner Network Distribution</h3>
+               {loading.locations ? (
+                 <div className="loading" style={{ textAlign: 'center', padding: '20px' }}>Loading map data...</div>
+               ) : error.locations ? (
+                 <div className="error-message" style={{ textAlign: 'center', padding: '20px' }}>{error.locations}</div>
+               ) : minerLocations.length > 0 ? (
+                 <GlobalNetworkMap locations={minerLocations} />
+               ) : (
+                 <div className="no-data" style={{ textAlign: 'center', padding: '20px' }}>No miner location data available to display on map.</div>
+               )}
+             </div>
             {loading.global ? (
               <div className="loading">Loading global metrics...</div>
             ) : error.global ? (
@@ -747,6 +787,7 @@ export default function App() {
           onClick={() => {
             if (activeTab === "global") {
                 fetchGlobalMetrics();
+                fetchMinerLocations();
             } else if (activeTab === "miners") {
                 fetchMiners(); // Refresh list of miners
                 if (selectedMiner) { // If a miner is selected, refresh their data too
