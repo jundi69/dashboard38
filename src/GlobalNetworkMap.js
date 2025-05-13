@@ -85,6 +85,9 @@ const GlobalNetworkMap = ({ locations }) => {
       country: loc.country,
     }));
   }, [locations]);
+
+  console.log('Type of Map constructor:', typeof Map, Map);
+
   
   // This 'aggregatedData' is for the scatterplot dots to show density at a point
   const aggregatedData = React.useMemo(() => {
