@@ -1,7 +1,7 @@
 // src/GlobalNetworkMap.js
 import React, { useState, useCallback } from 'react';
 import DeckGL from '@deck.gl/react';
-import { Map } from 'react-map-gl'; // Using react-map-gl's Map component wrapper
+import Map from 'react-map-gl/maplibre';
 import maplibregl from 'maplibre-gl';
 import { HexagonLayer } from '@deck.gl/aggregation-layers';
 import { LineLayer } from '@deck.gl/layers';
