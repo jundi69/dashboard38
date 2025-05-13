@@ -1,7 +1,7 @@
 // src/GlobalNetworkMap.js
 import React, { useEffect, useState } from 'react'; // Added useState, useEffect
 import DeckGL from '@deck.gl/react';
-import Map from 'react-map-gl/maplibre';
+import BaseMap from 'react-map-gl/maplibre';
 import maplibregl from 'maplibre-gl';
 import { ScatterplotLayer, LineLayer, GeoJsonLayer } from '@deck.gl/layers'; // Added GeoJsonLayer
 
@@ -85,9 +85,6 @@ const GlobalNetworkMap = ({ locations }) => {
       country: loc.country,
     }));
   }, [locations]);
-
-  console.log('Type of Map constructor:', typeof Map, Map);
-
   
   // This 'aggregatedData' is for the scatterplot dots to show density at a point
   const aggregatedData = React.useMemo(() => {
@@ -226,7 +223,7 @@ const GlobalNetworkMap = ({ locations }) => {
         style={{ cursor: 'default' }}
         // getTooltip={false} // Disable tooltips
       >
-        <Map
+        <BaseMap
           mapLib={maplibregl}
           mapStyle={MINIMAL_DARK_STYLE} // Using the truly minimal style
           reuseMaps
