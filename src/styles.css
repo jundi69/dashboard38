@@ -125,77 +125,79 @@ code {
   border-collapse: collapse; /* Remove double borders */
 }
 
+/* MODIFIED: AllReduce Operations Dropdown (main table cells) */
 .main-operations-table th,
 .main-operations-table td {
-  border-bottom: 1px solid #ddd; /* Lighter border */
-  padding: 8px 12px; /* Adjust padding */
+  border-bottom: 1px solid #222222; /* Darker border for better contrast on dark theme */
+  padding: 10px 15px; /* Consistent padding */
   text-align: left;
+  color: #cccccc; /* Light grey for text in cells */
 }
 
 .main-operations-table th {
-  background-color: #f8f8f8; /* Light header background */
+  background-color: #1a1a1a; /* Darker grey for header row - matches other tables */
+  color: #f0f0f0;
 }
 
 /* Style the expand button */
 .expand-button {
-  background: none;
-  border: 1px solid #ccc;
-  color: #555;
+  background: #222222; /* Darker background */
+  border: 1px solid #444444; /* Darker border */
+  color: #cccccc; /* Lighter text */
   cursor: pointer;
   padding: 2px 6px;
   border-radius: 3px;
   font-weight: bold;
   line-height: 1; /* Ensure button size is consistent */
+  transition: background-color 0.2s;
 }
 .expand-button:hover {
-  background-color: #eee;
+  background-color: #333333;
 }
 
 /* Style the expanded row header slightly */
 .expanded-row-header {
-  background-color: #f0f5ff; /* Light blue background when expanded */
+  background-color: #101010; /* Slightly different dark for expanded header if needed */
 }
+
 
 .map-container {
-  background-color: #f9f9f9; /* Light background for the map area */
+  /* This is for the Deck.gl map, which usually handles its own background.
+     If you wrap it in a div with class map-container, you can style that wrapper.
+     For now, let's assume GlobalNetworkMap component sets its own map background.
+     If it needs a container, ensure it's styled for dark theme.
+  */
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-  /* Ensure full-width is applied if it's not already doing this */
+  /* box-shadow: 0 2px 8px rgba(0,0,0,0.05); - Remove shadow for flatter dark look */
 }
 
-.map-container h3 {
-  margin-top: 0;
-  padding: 15px 20px;
-  border-bottom: 1px solid #eee;
-  margin-bottom: 10px;
-}
-
-/* Tooltip styling is handled by Deck.gl's getTooltip, 
+/* Tooltip styling is handled by Deck.gl's getTooltip,
    but if you were to use a custom div: */
 .deckgl-tooltip {
-  background: white;
-  color: black;
+  background: #1c1c1c; /* Dark background for tooltip */
+  color: #e0e0e0; /* Light text */
   padding: 8px;
   border-radius: 4px;
   font-size: 0.9em;
+  border: 1px solid #333333; /* Subtle border */
   box-shadow: 0 2px 4px rgba(0,0,0,0.3);
   max-width: 250px;
   pointer-events: none; /* Important for map interaction */
   z-index: 1000;
 }
 
-/* Style the container for the nested table */
+/* MODIFIED: Style the container for the nested table (AllReduce dropdown content) */
 .validator-details-container {
   padding: 15px;
-  background-color: #fdfdfd; /* Slightly off-white background for contrast */
-  border-top: 2px solid #add8e6; /* Light blue top border */
-  margin: 0; /* Remove margin if td padding is enough */
+  background-color: #111111; /* Slightly lighter black/very dark grey */
+  border-top: 2px solid #2a2a2a; /* Darker top border for separation */
+  margin: 0;
 }
 
 .validator-details-container h4 {
   margin-top: 0;
   margin-bottom: 10px;
-  color: #333;
+  color: #e0e0e0; /* Light grey for title */
 }
 
 /* Style the nested validator details table */
@@ -207,17 +209,19 @@ code {
 
 .validator-details-table th,
 .validator-details-table td {
-  border: 1px solid #e0e0e0; /* Lighter borders for nested table */
+  border: 1px solid #2a2a2a; /* Dark borders */
   padding: 6px 10px;
   text-align: left;
+  color: #cccccc; /* Light grey text */
 }
 
 .validator-details-table th {
-  background-color: #f0f0f0; /* Even lighter header for nested table */
+  background-color: #1f1f1f; /* Darker header for nested table */
+  color: #f0f0f0;
 }
 
 .validator-details-table tbody tr:nth-child(even) {
-  background-color: #fafafa; /* Zebra striping */
+  background-color: #161616; /* Subtle zebra striping for nested table */
 }
 
 /* Optional: Smaller success rate display */
@@ -229,11 +233,10 @@ code {
 .loading, .error-message, .no-data {
   text-align: center;
   padding: 20px;
-  color: #666;
+  /* color: #666; - Handled by specific styles below */
 }
-.error-message {
-  color: #d9534f; /* Red color for errors */
-}
+/* .error-message - Handled in main error message styles */
+
 
 /* Charts */
 .charts {
@@ -288,17 +291,19 @@ code {
   margin-top: 20px; /* Ensure some space if global metrics are still loading/error */
 }
 
-.chart-container.half-width { /* Applied to loss and perplexity chart containers */
-  flex: 1; /* Each chart takes equal space */
-  min-width: 300px; /* Minimum width for readability */
-  background-color: #1A202C; /* Dark background for chart cards */
-  padding: 15px;
+/* MODIFIED: Global Overview - Loss/Perplexity chart containers */
+.chart-container.half-width {
+  flex: 1;
+  min-width: 300px;
+  background-color: #0f0f0f; /* MATCHES .chart-container for consistency */
+  padding: 20px;              /* MATCHES .chart-container */
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  border: 1px solid #2a2a2a; /* MATCHES .chart-container */
+  box-shadow: none;           /* MATCHES .chart-container */
 }
 .chart-container.half-width h3 {
     margin-top: 0;
-    color: #CBD5E0; /* Lighter text for chart titles */
+    color: #e0e0e0; /* Light grey for chart titles - MATCHES .chart-container h3 */
 }
 .chart-container.half-width .no-data {
     color: #A0AEC0;
@@ -310,9 +315,10 @@ code {
   color: #aaaaaa !important;
 }
 .recharts-tooltip-wrapper {
-  background-color: #1c1c1c !important;
+  background-color: #1c1c1c !important; /* Dark background */
   border: 1px solid #333 !important;
   border-radius: 4px !important;
+  color: #e0e0e0 !important; /* Light text for tooltip content */
 }
 .recharts-tooltip-wrapper .recharts-tooltip-label {
   color: #f0f0f0 !important;
@@ -332,7 +338,7 @@ code {
 
 
 /* Stats Overview Cards */
-.stats-overview {
+.stats-overview { /* This class is not currently used in your App.js for the cards */
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 20px;
@@ -352,10 +358,11 @@ code {
   min-width: 300px; /* Minimum width before wrapping or shrinking too much */
   /* The map component itself will define its background and appearance */
 }
-.map-column h3 {
+.map-column h3 { /* If you have a title above the map */
   margin-top: 0;
   margin-bottom: 10px;
-  font-size: 1.2em; /* Slightly smaller title for this section */
+  font-size: 1.2em;
+  color: #e0e0e0;
 }
 
 .stats-column {
@@ -366,12 +373,14 @@ code {
   min-width: 250px;
 }
 
+/* MODIFIED: Global Overview - Stats Overview Cards */
 .stat-overview-card {
-  background-color: #2D3748; /* Example dark theme card background */
-  color: #E2E8F0; /* Example dark theme text color */
+  background-color: #0f0f0f; /* MATCHES .chart-container for consistency */
+  color: #E2E8F0;
   padding: 15px;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  border: 1px solid #2a2a2a; /* MATCHES .chart-container */
+  box-shadow: none;           /* MATCHES .chart-container */
   display: flex;
   align-items: center;
 }
@@ -381,7 +390,7 @@ code {
   margin-right: 15px;
   padding: 5px;
   border-radius: 50%;
-  background-color: rgba(255,255,255,0.1);
+  background-color: rgba(255,255,255,0.05); /* Slightly lighter than card for icon bg */
 }
 /* More distinct icon colors, but still desaturated for the theme */
 .bandwidth-icon { color: #6c99bb; } /* Muted blue */
@@ -440,7 +449,7 @@ code {
 }
 
 .metric-item {
-  background-color: #1a1a1a; /* Dark grey, slightly lighter than card backgrounds */
+  background-color: #1a1a1a; /* Dark grey, slightly lighter than chart cards */
   padding: 15px;
   border-radius: 6px;
   text-align: center;
