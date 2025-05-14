@@ -9,22 +9,22 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  AreaChart,
-  Area,
+  // AreaChart, // Not used in current context, can remove if not needed elsewhere
+  // Area,
 } from "recharts";
 import "./styles.css";
 import axios from "axios";
 import 'maplibre-gl/dist/maplibre-gl.css';
 import GlobalNetworkMap from './GlobalNetworkMap';
 
-const API_BASE_URL = process.env.REACT_APP_FASTAPI_URL || "http://localhost:8000"; // Ensure your .env uses REACT_APP_ prefix or Vite's VITE_ prefix
+const API_BASE_URL = process.env.REACT_APP_FASTAPI_URL || "http://localhost:8000";
 
-// Format time helper
-const formatTime = (timeStr) => {
-  if (!timeStr) return '';
-  const date = new Date(timeStr);
-  return date.toLocaleTimeString();
-};
+// Format time helper (can be kept for tooltips if time is still shown)
+// const formatTime = (timeStr) => {
+//   if (!timeStr) return '';
+//   const date = new Date(timeStr);
+//   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+// };
 
 const formatFullDate = (timeStr) => {
   if (!timeStr) return '';
@@ -32,7 +32,17 @@ const formatFullDate = (timeStr) => {
   return date.toLocaleString();
 };
 
-// Define some colors for miner lines, or generate them dynamically
+// Tooltip formatter for inner_step charts
+const stepTooltipLabelFormatter = (label, payload) => {
+  if (payload && payload.length > 0) {
+    const point = payload[0].payload; // Access the full data point
+    // return `Step: ${label}, Epoch: ${point.epoch}, Time: ${formatTime(point.time)}`;
+    return `Step: ${label}${point.epoch !== undefined ? `, Epoch: ${point.epoch}` : ''}${point.time ? `, Time: ${formatFullDate(point.time)}` : ''}`;
+  }
+  return `Step: ${label}`;
+};
+
+
 const MINER_COLORS = [
   "#8884d8", "#82ca9d", "#ffc658", "#ff7300", "#00C49F",
   "#FFBB28", "#FF8042", "#0088FE", "#A3A1FB", "#D4A1FB",
@@ -59,7 +69,6 @@ export default function App() {
     locations: null,
   });
 
-  // Updated globalData state structure
   const [globalData, setGlobalData] = useState({
     all_miner_losses: {},
     all_miner_perplexities: {},
@@ -93,7 +102,7 @@ export default function App() {
     } catch (err) {
       console.error("Error fetching global metrics:", err);
       setError(prev => ({ ...prev, global: "No data currently available. Please try again later." }));
-      setGlobalData({ // Reset to initial structure on error
+      setGlobalData({
         all_miner_losses: {},
         all_miner_perplexities: {},
         global_max_epoch_series: [],
@@ -107,11 +116,9 @@ export default function App() {
     }
   }, []);
 
-  // fetchMiners, fetchMinerData, fetchAllReduceOperations remain the same
   const fetchMiners = useCallback(async () => {
     setLoading(prev => ({ ...prev, miners: true }));
     setError(prev => ({ ...prev, miners: null }));
-
     try {
       const response = await axios.get(`${API_BASE_URL}/metrics/miners`);
       setMiners(Array.isArray(response.data) ? response.data.map(uid => ({
@@ -128,13 +135,12 @@ export default function App() {
   }, []);
 
   const fetchMinerData = useCallback(async (uid) => {
-    if (!uid) { // Prevent fetching if uid is null or empty
+    if (!uid) {
         setMinerData(null);
         return;
     }
     setLoading(prev => ({ ...prev, minerData: true }));
     setError(prev => ({ ...prev, minerData: null }));
-
     try {
       const response = await axios.get(`${API_BASE_URL}/metrics/miner/${uid}`);
       setMinerData(response.data);
@@ -153,7 +159,6 @@ export default function App() {
     setExpandedOpKey(null);
     setLoading(prev => ({ ...prev, allreduce: true }));
     setError(prev => ({ ...prev, allreduce: null }));
-
     try {
       const response = await axios.get(`${API_BASE_URL}/metrics/allreduce`);
       setAllReduceOperations(Array.isArray(response.data) ? response.data : []);
@@ -171,7 +176,6 @@ export default function App() {
     setError(prev => ({ ...prev, locations: null }));
     try {
       const response = await axios.get(`${API_BASE_URL}/locations/miners`);
-      // Filter for valid lat/lon to prevent map errors
       const validLocations = Array.isArray(response.data)
         ? response.data.filter(loc =>
             typeof loc.lat === 'number' && typeof loc.lon === 'number' &&
@@ -199,15 +203,13 @@ export default function App() {
   useEffect(() => {
     if (activeTab === "miners") {
       fetchMiners();
-      // If a miner was previously selected, re-fetch their data when switching to this tab
-      // or clear it if you prefer the user to re-select.
       if (selectedMiner) {
         fetchMinerData(selectedMiner);
       } else {
-        setMinerData(null); // Clear previous miner data if no miner is selected
+        setMinerData(null);
       }
     }
-  }, [activeTab, fetchMiners, selectedMiner, fetchMinerData]); // Added selectedMiner & fetchMinerData
+  }, [activeTab, fetchMiners, selectedMiner, fetchMinerData]);
 
   useEffect(() => {
     if (activeTab === "allreduce") {
@@ -215,21 +217,16 @@ export default function App() {
     }
   }, [activeTab, fetchAllReduceOperations]);
 
-  // This useEffect specifically handles fetching data when selectedMiner changes.
-  // It's separate from the tab switching logic.
   useEffect(() => {
-    if (selectedMiner && activeTab === "miners") { // Only fetch if on miners tab and a miner is selected
+    if (selectedMiner && activeTab === "miners") {
       fetchMinerData(selectedMiner);
     }
-  }, [selectedMiner, activeTab, fetchMinerData]); // Ensure activeTab is a dependency
+  }, [selectedMiner, activeTab, fetchMinerData]);
 
   const handleMinerSelect = (uid) => {
-    setSelectedMiner(uid); // This will trigger the useEffect above if activeTab is "miners"
+    setSelectedMiner(uid);
   };
 
-
-  // Calculate key metrics for display - these now use the new globalData structure
-  // For average bandwidth and training rate, we'll display the latest value from the series
   const latestTotalBandwidth = globalData?.global_total_bandwidth_series && globalData.global_total_bandwidth_series.length > 0
     ? globalData.global_total_bandwidth_series[globalData.global_total_bandwidth_series.length - 1]?.value?.toFixed(2)
     : "0";
@@ -240,7 +237,8 @@ export default function App() {
   
   const activeMinersCurrentCount = globalData?.active_miners_current || "0";
     
-  const currentMaxEpoch = globalData?.global_max_epoch_series && globalData.global_max_epoch_series.length > 0
+  // This is now the "Outer Step"
+  const currentOuterStep = globalData?.global_max_epoch_series && globalData.global_max_epoch_series.length > 0
     ? globalData.global_max_epoch_series[globalData.global_max_epoch_series.length - 1]?.value
     : "0";
 
@@ -251,7 +249,6 @@ export default function App() {
         <h1>Distributed Training</h1>
         <p>Communally Training LLMs</p>
         <div className="tabs">
-          {/* ... tab buttons ... */}
           <button
             className={activeTab === "global" ? "active" : ""}
             onClick={() => setActiveTab("global")}
@@ -276,28 +273,23 @@ export default function App() {
       <div className="content">
         {activeTab === "global" && (
           <div className="global-view">
-            <h2>Global Training Overview</h2> {/* Updated Title */}
-            <div className="map-and-stats-row"> {/* New parent container */}
-              
-              {/* Column 1: Map */}
+            <h2>Global Training Overview</h2>
+            <div className="map-and-stats-row">
               <div className="map-column">
                 {loading.locations ? (
                   <div className="loading" style={{ textAlign: 'center', padding: '20px' }}>Loading map data...</div>
                 ) : error.locations ? (
                   <div className="error-message" style={{ textAlign: 'center', padding: '20px' }}>{error.locations}</div>
                 ) : minerLocations.length > 0 ? (
-                  // Pass a specific height to the map component or style its container
                   <GlobalNetworkMap locations={minerLocations} mapHeight="350px" />
                 ) : (
-                  <div className="no-data" style={{ textAlign: 'center', padding: '20px', height: '350px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1A202C' /* Dark bg for empty state */, color: '#A0AEC0' }}>
+                  <div className="no-data" style={{ textAlign: 'center', padding: '20px', height: '350px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1A202C', color: '#A0AEC0' }}>
                     No miner location data.
                   </div>
                 )}
               </div>
 
-              {/* Column 2: Stats Overview Cards */}
               <div className="stats-column">
-                {/* Stats Overview Cards - these will stack vertically here */}
                 <div className="stat-overview-card">
                   <div className="stat-icon bandwidth-icon">📶</div>
                   <div className="stat-content">
@@ -307,7 +299,6 @@ export default function App() {
                     </p>
                   </div>
                 </div>
-                
                 <div className="stat-overview-card">
                   <div className="stat-icon tokens-icon">🚀</div>
                   <div className="stat-content">
@@ -317,13 +308,22 @@ export default function App() {
                     </p>
                   </div>
                 </div>
-                
                 <div className="stat-overview-card">
                   <div className="stat-icon miners-icon">👨‍💻</div>
                   <div className="stat-content">
                     <h3>Active Miners</h3>
                     <p className="stat-value">
                       {activeMinersCurrentCount}
+                    </p>
+                  </div>
+                </div>
+                {/* New Stat Box for Outer Step */}
+                <div className="stat-overview-card">
+                  <div className="stat-icon epoch-icon">🔄</div> {/* You might want a different icon */}
+                  <div className="stat-content">
+                    <h3>Outer Step (Epoch)</h3>
+                    <p className="stat-value">
+                      {currentOuterStep}
                     </p>
                   </div>
                 </div>
@@ -334,24 +334,41 @@ export default function App() {
             ) : error.global ? (
               <div className="error-message" style={{ marginTop: '20px'}}>{error.global}</div>
             ) : (
-              <div className="charts-row"> {/* Parent for side-by-side charts */}
-                {/* All Miner Losses Chart */}
-                <div className="chart-container half-width"> {/* half-width class for styling */}
-                  <h3>Miner Loss <span className="epoch-indicator">Outer Step {currentMaxEpoch}</span></h3>
+              <div className="charts-row">
+                <div className="chart-container half-width">
+                  {/* Removed Outer Step from title */}
+                  <h3>Miner Loss (vs Inner Step)</h3>
                   {globalData?.all_miner_losses && Object.keys(globalData.all_miner_losses).length > 0 ? (
-                    <ResponsiveContainer width="100%" height={300}> {/* Adjusted height */}
-                      <LineChart margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart margin={{ top: 5, right: 30, left: 0, bottom: 5 }}> {/* Adjusted right margin for YAxis labels */}
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="time" type="category" allowDuplicatedCategory={false} tickFormatter={formatTime} />
-                        <YAxis />
-                        <Tooltip labelFormatter={formatFullDate} />
+                        {/* X-axis is now inner_step */}
+                        <XAxis
+                          dataKey="inner_step"
+                          type="number" // Important for numeric data
+                          domain={['dataMin', 'dataMax']} // Auto domain
+                          allowDuplicatedCategory={false} // Not needed for type="number"
+                          // tickFormatter={(tick) => tick.toLocaleString()} // Simple number format
+                        />
+                        <YAxis domain={['auto', 'auto']} /> {/* Let Y-axis auto-scale */}
+                        <Tooltip
+                          labelFormatter={stepTooltipLabelFormatter} // Use custom formatter
+                          formatter={(value) => value.toFixed(4)} // Format loss value
+                        />
                         <Legend />
                         {Object.entries(globalData.all_miner_losses).map(([minerUid, lossData], index) => (
                           lossData && lossData.length > 0 && (
                             <Line
-                              key={`loss-${minerUid}`} type="monotone" data={lossData} dataKey="value"
-                              name={`Miner ${minerUid} Loss`} stroke={MINER_COLORS[index % MINER_COLORS.length]}
-                              strokeWidth={1.5} dot={false} activeDot={{ r: 5 }}
+                              key={`loss-${minerUid}`}
+                              type="monotone"
+                              data={lossData} // Each miner gets their own data array
+                              dataKey="value" // Y-axis value
+                              name={`Miner ${minerUid} Loss`}
+                              stroke={MINER_COLORS[index % MINER_COLORS.length]}
+                              strokeWidth={1.5}
+                              dot={false}
+                              activeDot={{ r: 5 }}
+                              isAnimationActive={false} // Optional: disable animation for performance
                             />
                           )
                         ))}
@@ -362,23 +379,38 @@ export default function App() {
                   )}
                 </div>
 
-                {/* All Miner Perplexities Chart */}
-                <div className="chart-container half-width"> {/* half-width class for styling */}
-                  <h3>Miner Perplexity <span className="epoch-indicator">Outer Step {currentMaxEpoch}</span></h3>
+                <div className="chart-container half-width">
+                  {/* Removed Outer Step from title */}
+                  <h3>Miner Perplexity (vs Inner Step)</h3>
                   {globalData?.all_miner_perplexities && Object.keys(globalData.all_miner_perplexities).length > 0 ? (
-                    <ResponsiveContainer width="100%" height={300}> {/* Adjusted height */}
-                      <LineChart margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="time" type="category" allowDuplicatedCategory={false} tickFormatter={formatTime} />
-                        <YAxis />
-                        <Tooltip labelFormatter={formatFullDate}/>
+                        <XAxis
+                          dataKey="inner_step"
+                          type="number"
+                          domain={['dataMin', 'dataMax']}
+                          // tickFormatter={(tick) => tick.toLocaleString()}
+                        />
+                        <YAxis domain={['auto', 'auto']} />
+                        <Tooltip
+                          labelFormatter={stepTooltipLabelFormatter}
+                          formatter={(value) => value.toFixed(2)} // Format perplexity
+                        />
                         <Legend />
                         {Object.entries(globalData.all_miner_perplexities).map(([minerUid, perplexityData], index) => (
                           perplexityData && perplexityData.length > 0 && (
                             <Line
-                              key={`perplexity-${minerUid}`} type="monotone" data={perplexityData} dataKey="value"
-                              name={`Miner ${minerUid} Perplexity`} stroke={MINER_COLORS[index % MINER_COLORS.length]}
-                              strokeWidth={1.5} dot={false} activeDot={{ r: 5 }}
+                              key={`perplexity-${minerUid}`}
+                              type="monotone"
+                              data={perplexityData}
+                              dataKey="value"
+                              name={`Miner ${minerUid} Perplexity`}
+                              stroke={MINER_COLORS[index % MINER_COLORS.length]}
+                              strokeWidth={1.5}
+                              dot={false}
+                              activeDot={{ r: 5 }}
+                              isAnimationActive={false}
                             />
                           )
                         ))}
@@ -393,10 +425,9 @@ export default function App() {
           </div>
         )}
 
+        {/* ... (Miner Explorer and AllReduce Operations tabs remain the same) ... */}
         {activeTab === "miners" && (
           <div className="miner-explorer">
-            {/* ... Miner Explorer JSX (remains largely the same as your provided code) ... */}
-            {/* Make sure the "Incentive Over Time" chart uses minerData.incentive_timeseries */}
             <h2>Miner Explorer</h2>
             
             {loading.miners ? (
@@ -424,11 +455,11 @@ export default function App() {
               <div className="no-data">No miners available</div>
             )}
             
-            {loading.minerData && selectedMiner && ( // Only show loading if a miner is selected and loading
+            {loading.minerData && selectedMiner && (
               <div className="loading">Loading data for Miner {selectedMiner}...</div>
             )}
             
-            {error.minerData && selectedMiner &&( // Only show error if a miner is selected and error occurred
+            {error.minerData && selectedMiner &&(
               <div className="error-message">{error.minerData}</div>
             )}
             
@@ -467,7 +498,7 @@ export default function App() {
                       <ResponsiveContainer width="100%" height={300}>
                         <LineChart data={minerData.training.loss}>
                           <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="time" tickFormatter={formatTime} />
+                          <XAxis dataKey="time" tickFormatter={(timeStr) => new Date(timeStr).toLocaleTimeString()} /> {/* Assuming 'time' here, or adapt if miner detail also uses inner_step */}
                           <YAxis />
                           <Tooltip
                             labelFormatter={(label) => new Date(label).toLocaleString()}
@@ -496,8 +527,8 @@ export default function App() {
                       <ResponsiveContainer width="100%" height={300}>
                         <LineChart data={minerData.incentive_timeseries}>
                           <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="time" tickFormatter={formatTime} />
-                          <YAxis  domain={['auto', 'auto']} tickFormatter={(value) => value.toFixed(4)}/> {/* Adjust domain/formatter if needed */}
+                          <XAxis dataKey="time" tickFormatter={(timeStr) => new Date(timeStr).toLocaleTimeString()} />
+                          <YAxis  domain={['auto', 'auto']} tickFormatter={(value) => value.toFixed(4)}/>
                           <Tooltip
                             labelFormatter={(label) => new Date(label).toLocaleString()}
                             formatter={(value) => [value.toFixed(5), 'Incentive']}
@@ -563,7 +594,7 @@ export default function App() {
         )}
 
         {activeTab === "allreduce" && (
-          <div className="allreduce-operations">
+           <div className="allreduce-operations">
             <h2>AllReduce Operations</h2>
 
             {loading.allreduce ? (
@@ -572,57 +603,32 @@ export default function App() {
               <div className="error-message">{error.allreduce}</div>
             ) : (
               <>
-                {/* Main Operations Table */}
                 <div className="operations-table-container">
                   <h3>Recent Operations Log</h3>
                   {allReduceOperations.length > 0 ? (
-                    <table className="operations-table main-operations-table"> {/* Added main-operations-table class */}
+                    <table className="operations-table main-operations-table">
                       <thead>
                         <tr>
-                          <th style={{ width: '30px' }}></th> {/* Expand Column */}
+                          <th style={{ width: '30px' }}></th>
                           <th>Operation ID</th>
                           <th>Epoch</th>
                           <th>Time (Earliest Report)</th>
                           <th>Reporting Validators</th>
-                          {/* Optional: Add columns for Avg Duration / Avg Success Rate */}
                         </tr>
                       </thead>
                       <tbody>
                         {allReduceOperations.map((op) => {
                           const currentOpKey = getOpKey(op);
                           const isExpanded = expandedOpKey === currentOpKey;
-
-                          // --- Calculate Averages for display or charts (Optional) ---
-                          let avgDuration = null;
-                          let avgSuccessRate = null;
-                          let totalBandwidth = null;
-                          if (op.validator_reports && op.validator_reports.length > 0) {
-                              const validDurations = op.validator_reports.map(r => r.metrics?.duration).filter(d => d != null);
-                              const validRates = op.validator_reports.map(r => r.metrics?.success_rate).filter(r => r != null);
-                              const validBandwidths = op.validator_reports.map(r => r.metrics?.bandwidth).filter(b => b != null);
-                              
-                              if (validDurations.length > 0) {
-                                  avgDuration = validDurations.reduce((sum, d) => sum + d, 0) / validDurations.length;
-                              }
-                              if (validRates.length > 0) {
-                                  avgSuccessRate = validRates.reduce((sum, r) => sum + r, 0) / validRates.length;
-                              }
-                              if (validBandwidths.length > 0) {
-                                  totalBandwidth = validBandwidths.reduce((sum, b) => sum + b, 0);
-                              }
-                          }
-                          // --- End Average Calculation ---
-
                           return (
                             <Fragment key={currentOpKey}>
-                              {/* Main Row */}
                               <tr className={isExpanded ? 'expanded-row-header' : ''}>
                                 <td>
                                   <button
                                     className="expand-button"
                                     onClick={() => setExpandedOpKey(isExpanded ? null : currentOpKey)}
                                     aria-expanded={isExpanded}
-                                    aria-controls={`details-${currentOpKey}`} // For accessibility
+                                    aria-controls={`details-${currentOpKey}`}
                                   >
                                     {isExpanded ? '−' : '+'}
                                   </button>
@@ -631,13 +637,9 @@ export default function App() {
                                 <td>{op.epoch || 'N/A'}</td>
                                 <td>{op.representative_time ? formatFullDate(op.representative_time) : 'N/A'}</td>
                                 <td>{op.validator_reports?.length || 0}</td>
-                                {/* Optional: Display averages <td>{avgDuration?.toFixed(2) || 'N/A'}</td> */}
                               </tr>
-
-                              {/* Expanded Row (Conditional) */}
                               {isExpanded && (
                                 <tr className="expanded-row-content">
-                                  {/* Note the colSpan should match the number of columns in the THEAD above */}
                                   <td colSpan="5">
                                     <div id={`details-${currentOpKey}`} className="validator-details-container">
                                       <h4>Validator Reports for Operation {op.operation_id} (Epoch {op.epoch})</h4>
@@ -661,14 +663,10 @@ export default function App() {
                                                 <td>{report.metrics?.duration?.toFixed(2) ?? 'N/A'}</td>
                                                 <td>
                                                   {report.metrics?.success_rate != null ? (
-                                                    <div className="success-rate-small"> {/* Optional: smaller styling */}
-                                                     {/* You can add back the progress bar here if desired, using report.metrics.success_rate */}
-                                                     <span>{(report.metrics.success_rate * 100).toFixed(1)}%</span>
-                                                    </div>
+                                                    <span>{(report.metrics.success_rate * 100).toFixed(1)}%</span>
                                                   ) : 'N/A'}
                                                 </td>
                                                 <td>{report.metrics?.bandwidth?.toFixed(2) ?? 'N/A'}</td>
-                                                {/* Ensure field name matches backend: participating_miners */}
                                                 <td>{report.metrics?.participating_miners ?? 'N/A'}</td>
                                               </tr>
                                             ))}
@@ -691,17 +689,14 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Charts - Updated to use calculated averages */}
                 {allReduceOperations.length > 0 ? (
                   <div className="charts">
-                    {/* Success Rate Trend Chart (Using Average) */}
                     <div className="chart-container">
                       <h3>Avg Success Rate Trend</h3>
                       <ResponsiveContainer width="100%" height={300}>
                         <LineChart
                           data={allReduceOperations
                             .map(op => {
-                              // Recalculate average success rate for chart data
                               let avgSuccessRate = null;
                               if (op.validator_reports && op.validator_reports.length > 0) {
                                 const validRates = op.validator_reports.map(r => r.metrics?.success_rate).filter(r => r != null);
@@ -711,30 +706,28 @@ export default function App() {
                               }
                               return {
                                 time: op.representative_time || new Date().toISOString(),
-                                value: avgSuccessRate // Use calculated average
+                                value: avgSuccessRate
                               };
                             })
-                            .filter(item => item.value != null) // Filter out ops with no valid rate
-                            .slice().reverse()} // Reverse for chronological display
+                            .filter(item => item.value != null)
+                            .slice().reverse()}
                         >
                           <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="time" tickFormatter={formatTime} />
+                          <XAxis dataKey="time" tickFormatter={(timeStr) => new Date(timeStr).toLocaleTimeString()} />
                           <YAxis domain={[0, 1]} tickFormatter={(value) => `${(value * 100).toFixed(0)}%`} />
-                          <Tooltip labelFormatter={formatFullDate} formatter={(value) => [`${(value * 100).toFixed(1)}%`, 'Avg Success Rate']} />
+                          <Tooltip labelFormatter={(label) => new Date(label).toLocaleString()} formatter={(value) => [`${(value * 100).toFixed(1)}%`, 'Avg Success Rate']} />
                           <Legend />
                           <Line type="monotone" dataKey="value" stroke="#00bcd4" name="Avg Success Rate" strokeWidth={2} dot={false} activeDot={{ r: 8 }} />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
 
-                    {/* Duration Trend Chart (Using Average) */}
                     <div className="chart-container">
                       <h3>Avg AllReduce Duration</h3>
                        <ResponsiveContainer width="100%" height={300}>
                         <LineChart
                           data={allReduceOperations
                             .map(op => {
-                              // Recalculate average duration for chart data
                               let avgDuration = null;
                               if (op.validator_reports && op.validator_reports.length > 0) {
                                 const validDurations = op.validator_reports.map(r => r.metrics?.duration).filter(d => d != null);
@@ -744,16 +737,16 @@ export default function App() {
                               }
                               return {
                                 time: op.representative_time || new Date().toISOString(),
-                                value: avgDuration // Use calculated average
+                                value: avgDuration
                               };
                             })
-                            .filter(item => item.value != null) // Filter out ops with no valid duration
-                            .slice().reverse()} // Reverse for chronological display
+                            .filter(item => item.value != null)
+                            .slice().reverse()}
                         >
                           <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="time" tickFormatter={formatTime} />
+                          <XAxis dataKey="time" tickFormatter={(timeStr) => new Date(timeStr).toLocaleTimeString()} />
                           <YAxis />
-                          <Tooltip labelFormatter={formatFullDate} formatter={(value) => [value.toFixed(2), 'Avg Seconds']} />
+                          <Tooltip labelFormatter={(label) => new Date(label).toLocaleString()} formatter={(value) => [value.toFixed(2), 'Avg Seconds']} />
                           <Legend />
                           <Line type="monotone" dataKey="value" stroke="#ff5722" name="Avg Duration" strokeWidth={2} dot={false} activeDot={{ r: 8 }} />
                         </LineChart>
@@ -775,8 +768,8 @@ export default function App() {
                 fetchGlobalMetrics();
                 fetchMinerLocations();
             } else if (activeTab === "miners") {
-                fetchMiners(); // Refresh list of miners
-                if (selectedMiner) { // If a miner is selected, refresh their data too
+                fetchMiners();
+                if (selectedMiner) {
                     fetchMinerData(selectedMiner);
                 }
             } else if (activeTab === "allreduce") {
