@@ -1,9 +1,9 @@
 // src/GlobalNetworkMap.js
-import React, { useEffect, useState } from 'react'; // Added useState, useEffect
+import React, { useEffect, useState } from 'react';
 import DeckGL from '@deck.gl/react';
 import BaseMap from 'react-map-gl/maplibre';
 import maplibregl from 'maplibre-gl';
-import { ScatterplotLayer, LineLayer, GeoJsonLayer } from '@deck.gl/layers'; // Added GeoJsonLayer
+import { ScatterplotLayer, LineLayer, GeoJsonLayer } from '@deck.gl/layers';
 
 // Option A: Truly minimal style (just a dark background)
 const MINIMAL_DARK_STYLE = {
@@ -45,14 +45,8 @@ const Legend = () => {
 
 
 const GlobalNetworkMap = ({ locations }) => {
-  // --- For Option B: GeoJSON based land outlines ---
   const [worldOutlines, setWorldOutlines] = useState(null);
   useEffect(() => {
-    // You need to find a suitable world boundaries GeoJSON file and place it in your public folder
-    // Example: 'world-countries-sans-antarctica.geojson'
-    // Many sources online, search for "world countries geojson"
-    // For this example, I'll assume you have a file named 'world_outlines.geojson' in your /public directory.
-    // If you don't have one, the land outlines won't appear.
     fetch('/world_outlines.geojson') // ADJUST FILENAME if different
       .then(response => {
         if (!response.ok) {
@@ -68,13 +62,12 @@ const GlobalNetworkMap = ({ locations }) => {
     id: 'land-outline-layer',
     data: worldOutlines,
     stroked: true,
-    filled: true, // Fill the landmasses slightly
-    getFillColor: [20, 30, 40, 200], // Very dark, slightly opaque fill for land
-    getLineColor: [60, 100, 130, 200], // Bluish outline for countries
+    filled: true,
+    getFillColor: [20, 30, 40, 200],
+    getLineColor: [60, 100, 130, 200],
     lineWidthMinPixels: 0.5,
-    pickable: false,
+    pickable: false, // Ensure not pickable
   });
-  // --- End Option B ---
 
   const originalData = React.useMemo(() => {
     if (!locations || locations.length === 0) return [];
@@ -86,22 +79,17 @@ const GlobalNetworkMap = ({ locations }) => {
     }));
   }, [locations]);
   
-  // This 'aggregatedData' is for the scatterplot dots to show density at a point
   const aggregatedData = React.useMemo(() => {
     if (!originalData || originalData.length === 0) return [];
-  
-    const aggregation = new Map(); // Use a Map for easy keying by "lon,lat"
-  
+    const aggregation = new Map();
     originalData.forEach(point => {
-      // Ensure position is valid before creating a key
       if (Array.isArray(point.position) && point.position.length === 2 && !point.position.some(isNaN)) {
-        const key = `${point.position[0].toFixed(5)},${point.position[1].toFixed(5)}`; // Key by lon,lat (rounded)
+        const key = `${point.position[0].toFixed(5)},${point.position[1].toFixed(5)}`;
         if (!aggregation.has(key)) {
           aggregation.set(key, {
             position: point.position,
             count: 0,
             uids: [],
-            // Keep first city/country for tooltip, or combine them
             city: point.city,
             country: point.country,
           });
@@ -116,48 +104,46 @@ const GlobalNetworkMap = ({ locations }) => {
 
   const scatterplotLayer = new ScatterplotLayer({
     id: 'scatterplot-layer',
-    data: aggregatedData, // USE AGGREGATED DATA HERE
-    pickable: false, // Set to true if you want tooltips for aggregated points
+    data: aggregatedData,
+    pickable: false, // FIX 1: Ensure this is false if no hover interaction is desired on points
     opacity: 0.9,
     stroked: true,
     filled: true,
-    // radiusScale: 6, // Can be dynamic based on count too
-    radiusMinPixels: 3,
-    radiusMaxPixels: 20, // Allow larger dots for high counts
+    // FIX 3: Adjust radius scaling and max pixels
+    radiusMinPixels: 2, // Smallest dots are 2px (adjust as needed)
+    radiusMaxPixels: 40, // Increased from 20 to allow larger dots for high counts
     lineWidthMinPixels: 1,
     getPosition: d => d.position,
     getFillColor: [255, 107, 35, 220],
     getLineColor: [255, 255, 255, 150],
-    getRadius: d => 2 + Math.sqrt(d.count) * 3, // Vary radius by count (sqrt for less extreme scaling)
-    // Optional: onHover for tooltips showing count and UIDs
-    onHover: ({object, x, y}) => {
-      const el = document.getElementById('deckgl-tooltip'); // You'd need a tooltip div
-      if (object && el) {
-        el.style.display = 'block';
-        el.style.left = `${x}px`;
-        el.style.top = `${y}px`;
-        el.innerHTML = `Location: ${object.city || 'N/A'}, ${object.country || 'N/A'}<br/>Miners: ${object.count}<br/>UIDs: ${object.uids.slice(0,5).join(', ')}${object.uids.length > 5 ? '...' : ''}`;
-      } else if (el) {
-        el.style.display = 'none';
-      }
-    }
+    // FIX 3: Modified getRadius for better scaling.
+    // This example: base size 2px, then sqrt(count) * 2.5. Tune constants as needed.
+    // e.g., count=1  -> 2 + 1*2.5 = 4.5px
+    //       count=100 -> 2 + 10*2.5 = 27px (will be < radiusMaxPixels)
+    getRadius: d => 2 + Math.sqrt(d.count) * 2.5,
+    
+    // FIX 1: Removed onHover handler to prevent hand cursor.
+    // If tooltips on points were desired, 'pickable' would need to be true,
+    // and the hand cursor might be standard.
+    // onHover: ({object, x, y}) => { ... }
   });
 
   const lineData = React.useMemo(() => {
     const lines = [];
-    if (originalData && originalData.length > 1) { // Use originalData here
-      const maxPointsForMesh = 30;
-      if (originalData.length <= maxPointsForMesh) {
-        for (let i = 0; i < originalData.length; i++) {
-          for (let j = i + 1; j < originalData.length; j++) {
-            if (Array.isArray(originalData[i].position) && originalData[i].position.length === 2 &&
-                Array.isArray(originalData[j].position) && originalData[j].position.length === 2 &&
-                !originalData[i].position.some(isNaN) && !originalData[j].position.some(isNaN) ) {
-              lines.push({
-                sourcePosition: originalData[i].position,
-                targetPosition: originalData[j].position,
-              });
-            }
+    if (originalData && originalData.length > 1) {
+      // FIX 2: Removed the maxPointsForMesh limit to connect all locations.
+      // This creates a full mesh. For very large N, this can be dense.
+      for (let i = 0; i < originalData.length; i++) {
+        for (let j = i + 1; j < originalData.length; j++) {
+          const source = originalData[i];
+          const target = originalData[j];
+          // Ensure points and their positions are valid before creating a line
+          if (source && source.position && Array.isArray(source.position) && source.position.length === 2 && !source.position.some(isNaN) &&
+              target && target.position && Array.isArray(target.position) && target.position.length === 2 && !target.position.some(isNaN)) {
+            lines.push({
+              sourcePosition: source.position,
+              targetPosition: target.position,
+            });
           }
         }
       }
@@ -167,13 +153,13 @@ const GlobalNetworkMap = ({ locations }) => {
 
   const connectionLayer = new LineLayer({
     id: 'connection-layer',
-    data: lineData, // Ensure this is receiving the generated lines
+    data: lineData,
     getSourcePosition: d => d.sourcePosition,
     getTargetPosition: d => d.targetPosition,
-    getColor: [220, 220, 220, 120], // Brighter, slightly more opaque: (was [200,200,200,100])
-    getWidth: 1.5,                   // Slightly thicker (was 1.2)
-    widthUnits: 'pixels',            // Ensure width is in pixels
-    pickable: false,
+    getColor: [220, 220, 220, 120],
+    getWidth: 1.5,
+    widthUnits: 'pixels',
+    pickable: false, // Ensure not pickable
   });
 
   const INITIAL_VIEW_STATE = {
@@ -184,30 +170,22 @@ const GlobalNetworkMap = ({ locations }) => {
     bearing: 0
   };
 
-  // For debugging:
-  // useEffect(() => {
-  //   console.log("Locations for map:", locations);
-  //   console.log("Processed data for layers:", data);
-  //   console.log("Line data for connections:", lineData);
-  // }, [locations, data, lineData]);
-
-
   if (!locations || locations.length === 0) {
     return <div className="no-data" style={{padding: "20px", textAlign: "center"}}>No location data input.</div>;
   }
   if (!aggregatedData || aggregatedData.length === 0) {
-    // This implies locations were provided, but processing (e.g., due to invalid lat/lon) resulted in no valid points.
     return <div className="no-data" style={{padding: "20px", textAlign: "center"}}>Location data provided, but no valid points to display. Check lat/lon values.</div>;
   }
 
   const layers = [
-    landOutlineLayer, // Will be null if GeoJSON doesn't load
+    landOutlineLayer,
     scatterplotLayer,
     connectionLayer
-  ].filter(Boolean); // Filter out null layers
+  ].filter(Boolean);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '500px', background: '#0A0F14' }}>
+    // FIX 1: Added cursor: 'default' to the wrapper div as an additional measure.
+    <div style={{ position: 'relative', width: '100%', height: '500px', background: '#0A0F14', cursor: 'default' }}>
       <div style={{
         position: 'absolute', top: '10px', left: '10px', color: '#A0D0F0',
         fontSize: '16px', fontFamily: 'monospace', zIndex: 1,
@@ -218,17 +196,16 @@ const GlobalNetworkMap = ({ locations }) => {
 
       <DeckGL
         initialViewState={INITIAL_VIEW_STATE}
-        controller={false} // <<< COMPLETELY DISABLE DECKGL CONTROLLER FOR NO INTERACTION
+        controller={false} 
         layers={layers}
-        style={{ cursor: 'default' }}
-        // getTooltip={false} // Disable tooltips
+        style={{ cursor: 'default' }} // This was already here and is good
+        // getTooltip={false} // Consider uncommenting if you want to disable Deck.gl's default tooltip handling entirely
       >
         <BaseMap
           mapLib={maplibregl}
-          mapStyle={MINIMAL_DARK_STYLE} // Using the truly minimal style
+          mapStyle={MINIMAL_DARK_STYLE}
           reuseMaps
           preventStyleDiffing={true}
-          // --- Disable all base map interactions ---
           dragPan={false}
           dragRotate={false}
           scrollZoom={false}
@@ -236,10 +213,24 @@ const GlobalNetworkMap = ({ locations }) => {
           touchRotate={false}
           doubleClickZoom={false}
           keyboard={false}
-          attributionControl={false} // Hide MapLibre attribution
+          attributionControl={false}
         />
       </DeckGL>
       <Legend />
+      {/* The tooltip div for scatterplot points is removed as onHover is removed.
+          If you re-enable onHover for scatterplot points, you'll need a tooltip element like this:
+      <div id="deckgl-tooltip" style={{
+          position: 'absolute', 
+          display: 'none', // Controlled by onHover
+          pointerEvents: 'none', // Important
+          zIndex: 10, // Above map layers
+          background: 'rgba(0,0,0,0.8)', 
+          color: 'white', 
+          padding: '5px', 
+          borderRadius: '3px',
+          fontSize: '12px'
+      }}></div>
+      */}
     </div>
   );
 };
