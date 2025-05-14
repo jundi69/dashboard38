@@ -668,8 +668,8 @@ export default function App() {
                                                   ) : 'N/A'}
                                                 </td>
                                                 <td>{report.metrics?.bandwidth?.toFixed(2) ?? 'N/A'}</td>
-                                                {/* Ensure field name matches backend: participating_miners_count */}
-                                                <td>{report.metrics?.participating_miners_count ?? 'N/A'}</td>
+                                                {/* Ensure field name matches backend: participating_miners */}
+                                                <td>{report.metrics?.participating_miners ?? 'N/A'}</td>
                                               </tr>
                                             ))}
                                           </tbody>
