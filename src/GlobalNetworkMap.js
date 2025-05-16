@@ -1,9 +1,9 @@
 // src/GlobalNetworkMap.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState }  from 'react';
 import DeckGL from '@deck.gl/react';
 import BaseMap from 'react-map-gl/maplibre';
 import maplibregl from 'maplibre-gl';
-import { ScatterplotLayer, LineLayer, GeoJsonLayer } from '@deck.gl/layers';
+import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers'; // LineLayer removed
 
 // Option A: Truly minimal style (just a dark background)
 const MINIMAL_DARK_STYLE = {
@@ -21,7 +21,7 @@ const MINIMAL_DARK_STYLE = {
   ]
 };
 
-// --- Legend Component (same as before) ---
+// --- Legend Component (Updated) ---
 const Legend = () => {
   return (
     <div style={{
@@ -38,7 +38,7 @@ const Legend = () => {
       border: '1px solid #204060'
     }}>
       <div><span style={{height: '10px', width: '10px', backgroundColor: 'rgba(255, 107, 35, 0.8)', borderRadius: '50%', display: 'inline-block', marginRight: '5px'}}></span> Miner Location (dot size indicates density)</div>
-      <div style={{marginTop: '5px', color: '#A0A0A0'}}>Lines show connections</div>
+      {/* Removed: <div style={{marginTop: '5px', color: '#A0A0A0'}}>Lines show connections</div> */}
     </div>
   );
 };
@@ -63,10 +63,10 @@ const GlobalNetworkMap = ({ locations }) => {
     data: worldOutlines,
     stroked: true,
     filled: true,
-    getFillColor: [20, 30, 40, 200],
-    getLineColor: [60, 100, 130, 200],
+    getFillColor: [20, 30, 40, 200], // Slightly transparent dark fill
+    getLineColor: [60, 100, 130, 200], // Muted blueish-grey lines
     lineWidthMinPixels: 0.5,
-    pickable: false, // Ensure not pickable
+    pickable: false,
   });
 
   const originalData = React.useMemo(() => {
@@ -105,62 +105,24 @@ const GlobalNetworkMap = ({ locations }) => {
   const scatterplotLayer = new ScatterplotLayer({
     id: 'scatterplot-layer',
     data: aggregatedData,
-    pickable: false, // FIX 1: Ensure this is false if no hover interaction is desired on points
+    pickable: false, 
     opacity: 0.9,
     stroked: true,
     filled: true,
-    // FIX 3: Adjust radius scaling and max pixels
-    radiusMinPixels: 2, // Smallest dots are 2px (adjust as needed)
-    radiusMaxPixels: 40, // Increased from 20 to allow larger dots for high counts
+    radiusUnits: 'pixels', // Ensure radius is in pixels
+    radiusMinPixels: 2, 
+    radiusMaxPixels: 40, // Max size for a dot
     lineWidthMinPixels: 1,
     getPosition: d => d.position,
-    getFillColor: [255, 107, 35, 220],
-    getLineColor: [255, 255, 255, 150],
-    // FIX 3: Modified getRadius for better scaling.
-    // This example: base size 2px, then sqrt(count) * 2.5. Tune constants as needed.
-    // e.g., count=1  -> 2 + 1*2.5 = 4.5px
-    //       count=100 -> 2 + 10*2.5 = 27px (will be < radiusMaxPixels)
-    getRadius: d => 2 + Math.sqrt(d.count) * 2.5,
-    
-    // FIX 1: Removed onHover handler to prevent hand cursor.
-    // If tooltips on points were desired, 'pickable' would need to be true,
-    // and the hand cursor might be standard.
-    // onHover: ({object, x, y}) => { ... }
+    getFillColor: [255, 107, 35, 220], // Orange-red color for dots
+    getLineColor: [255, 255, 255, 150], // Whiteish outline for dots
+    // This function scales the radius of each dot based on the count of miners.
+    // Base size of 2px, plus a value proportional to the square root of the count.
+    // Adjust the multiplier (2.5 here) to change how rapidly dots grow with count.
+    getRadius: d => 2 + Math.sqrt(d.count) * 2.5, 
   });
 
-  const lineData = React.useMemo(() => {
-    const lines = [];
-    if (originalData && originalData.length > 1) {
-      // FIX 2: Removed the maxPointsForMesh limit to connect all locations.
-      // This creates a full mesh. For very large N, this can be dense.
-      for (let i = 0; i < originalData.length; i++) {
-        for (let j = i + 1; j < originalData.length; j++) {
-          const source = originalData[i];
-          const target = originalData[j];
-          // Ensure points and their positions are valid before creating a line
-          if (source && source.position && Array.isArray(source.position) && source.position.length === 2 && !source.position.some(isNaN) &&
-              target && target.position && Array.isArray(target.position) && target.position.length === 2 && !target.position.some(isNaN)) {
-            lines.push({
-              sourcePosition: source.position,
-              targetPosition: target.position,
-            });
-          }
-        }
-      }
-    }
-    return lines;
-  }, [originalData]);
-
-  const connectionLayer = new LineLayer({
-    id: 'connection-layer',
-    data: lineData,
-    getSourcePosition: d => d.sourcePosition,
-    getTargetPosition: d => d.targetPosition,
-    getColor: [220, 220, 220, 120],
-    getWidth: 1.5,
-    widthUnits: 'pixels',
-    pickable: false, // Ensure not pickable
-  });
+  // Removed lineData and connectionLayer logic
 
   const INITIAL_VIEW_STATE = {
     longitude: -0,
@@ -177,14 +139,14 @@ const GlobalNetworkMap = ({ locations }) => {
     return <div className="no-data" style={{padding: "20px", textAlign: "center"}}>Location data provided, but no valid points to display. Check lat/lon values.</div>;
   }
 
+  // Updated layers array to remove connectionLayer
   const layers = [
     landOutlineLayer,
     scatterplotLayer,
-    connectionLayer
+    // connectionLayer removed
   ].filter(Boolean);
 
   return (
-    // FIX 1: Added cursor: 'default' to the wrapper div as an additional measure.
     <div style={{ position: 'relative', width: '100%', height: '500px', background: '#0A0F14', cursor: 'default' }}>
       <div style={{
         position: 'absolute', top: '10px', left: '10px', color: '#A0D0F0',
@@ -196,10 +158,10 @@ const GlobalNetworkMap = ({ locations }) => {
 
       <DeckGL
         initialViewState={INITIAL_VIEW_STATE}
-        controller={false} 
+        controller={false} // Controller set to false, map is static
         layers={layers}
-        style={{ cursor: 'default' }} // This was already here and is good
-        // getTooltip={false} // Consider uncommenting if you want to disable Deck.gl's default tooltip handling entirely
+        style={{ cursor: 'default' }}
+        // getTooltip={false} // Uncomment if you want to completely disable default Deck.gl tooltips
       >
         <BaseMap
           mapLib={maplibregl}
@@ -217,20 +179,6 @@ const GlobalNetworkMap = ({ locations }) => {
         />
       </DeckGL>
       <Legend />
-      {/* The tooltip div for scatterplot points is removed as onHover is removed.
-          If you re-enable onHover for scatterplot points, you'll need a tooltip element like this:
-      <div id="deckgl-tooltip" style={{
-          position: 'absolute', 
-          display: 'none', // Controlled by onHover
-          pointerEvents: 'none', // Important
-          zIndex: 10, // Above map layers
-          background: 'rgba(0,0,0,0.8)', 
-          color: 'white', 
-          padding: '5px', 
-          borderRadius: '3px',
-          fontSize: '12px'
-      }}></div>
-      */}
     </div>
   );
 };
