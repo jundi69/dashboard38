@@ -12,6 +12,7 @@ import {
   // AreaChart, // Not used in current context, can remove if not needed elsewhere
   // Area,
 } from "recharts";
+import Select from 'react-select';
 import "./styles.css";
 import axios from "axios";
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -127,10 +128,11 @@ export default function App() {
     setError(prev => ({ ...prev, miners: null }));
     try {
       const response = await axios.get(`${API_BASE_URL}/metrics/miners`);
-      setMiners(Array.isArray(response.data) ? response.data.map(uid => ({
-        value: uid.toString(),
-        label: `Miner ${uid}`
-      })) : []);
+      const minerOptions = Array.isArray(response.data) ? response.data.map(uid => ({
+        value: uid.toString(), // react-select expects a 'value'
+        label: `Miner ${uid}`   // react-select expects a 'label'
+      })) : [];
+      setMiners(minerOptions);
     } catch (err) {
       console.error("Error fetching miners:", err);
       setError(prev => ({ ...prev, miners: "No data currently available. Please try again later." }));
@@ -236,21 +238,48 @@ export default function App() {
     }
   }, [activeTab, fetchAllReduceOperations]);
 
-  useEffect(() => {
-    if (selectedMiner && activeTab === "miners") {
-      fetchMinerData(selectedMiner);
-    }
-  }, [selectedMiner, activeTab, fetchMinerData]);
+  // useEffect(() => {
+  //   if (selectedMiner && activeTab === "miners") {
+  //     fetchMinerData(selectedMiner);
+  //   }
+  // }, [selectedMiner, activeTab, fetchMinerData]);
 
-  const handleMinerSelectChange = (event) => {
-    const { options } = event.target;
-    const values = [];
-    for (let i = 0, l = options.length; i < l; i += 1) {
-      if (options[i].selected) {
-        values.push(options[i].value);
+  useEffect(() => {
+    if (activeTab === "miners") {
+      fetchMiners(); // Fetch the list of all available miners to populate the select dropdown
+    }
+  }, [activeTab, fetchMiners]);
+
+
+  // Effect for Miners Tab - Fetching DATA for SELECTED miners
+  useEffect(() => {
+    if (activeTab === "miners") { // Only run if miners tab is active
+      if (selectedMiners.length > 0) {
+        selectedMiners.forEach(uid => {
+          if (!loading.minerData[uid] && (!minerData[uid] || error.minerData[uid])) {
+            fetchMinerData(uid);
+          }
+        });
+
+        const currentSelectedUIDs = new Set(selectedMiners.map(String));
+        setMinerData(prevMinerData => {
+            const nextMinerData = { ...prevMinerData };
+            Object.keys(nextMinerData).forEach(uidKey => {
+                if (!currentSelectedUIDs.has(uidKey)) {
+                    delete nextMinerData[uidKey];
+                }
+            });
+            return nextMinerData;
+        });
+
+      } else { 
+        setMinerData({}); 
       }
     }
-    setSelectedMiners(values);
+  }, [activeTab, selectedMiners, fetchMinerData, loading.minerData, error.minerData]);
+
+  const handleReactSelectChange = (selectedOptions) => {
+    setSelectedMiners(selectedOptions ? selectedOptions.map(option => option.value) : []);
   };
 
   const latestTotalBandwidth = globalData?.global_total_bandwidth_series && globalData.global_total_bandwidth_series.length > 0
@@ -465,25 +494,40 @@ export default function App() {
             ) : error.miners ? (
               <div className="error-message">{error.miners}</div>
             ) : miners.length > 0 ? (
-              <div className="miner-select">
-                <label className="select-label" htmlFor="miner-select">
+              <div className="miner-select" style={{ marginBottom: '25px' }}>
+                <label className="select-label" htmlFor="miner-multiselect" style={{ display: 'block', marginBottom: '8px' }}>
                   Select Miner UIDs to Compare (Ctrl/Cmd + Click for multiple)
                 </label>
                 {/* Simple HTML multi-select. Consider react-select for better UX. */}
-                <select
-                  id="miner-select"
-                  className="miner-select-dropdown"
-                  multiple={true} // Enable multi-select
-                  value={selectedMiners} // selectedMiners is an array of strings
-                  onChange={handleMinerSelectChange}
-                  size={Math.min(miners.length, 10)} // Show some options
-                  style={{ minHeight: '100px', overflowY: 'auto' }}
-                >
-                  {/* <option value="" disabled>Choose miners to compare</option> remove this for multi-select or handle it */}
-                  {miners.map(miner => (
-                    <option key={miner.value} value={miner.value}>{miner.label}</option>
-                  ))}
-                </select>
+                <Select
+                  id="miner-multiselect"
+                  isMulti
+                  options={miners} // `miners` state is already in {value, label} format due to fix in fetchMiners
+                  className="miner-select-dropdown" // You can keep this for general styling if needed
+                  classNamePrefix="react-select"    // For react-select specific styling
+                  // To show which options are selected, react-select needs the full option objects
+                  value={miners.filter(option => selectedMiners.includes(option.value))}
+                  onChange={handleReactSelectChange} // Use the new handler
+                  placeholder="Search and select miners..."
+                  isLoading={loading.miners} // loading.miners refers to loading the list itself
+                  isDisabled={loading.miners || miners.length === 0}
+                  noOptionsMessage={() => error.miners ? error.miners : "No miners found"}
+                  styles={{ /* Consider adding basic dark theme styles here or in CSS */
+                    control: (base) => ({ ...base, backgroundColor: '#1a1a1a', borderColor: '#444444' }),
+                    menu: (base) => ({ ...base, backgroundColor: '#1a1a1a' }),
+                    option: (base, state) => ({
+                        ...base,
+                        backgroundColor: state.isFocused ? '#333' : state.isSelected ? '#007bff' : '#1a1a1a',
+                        color: state.isSelected ? 'white' : '#e0e0e0',
+                        ':active': { ...base[':active'], backgroundColor: '#555' }
+                    }),
+                    multiValue: (base) => ({ ...base, backgroundColor: '#333' }),
+                    multiValueLabel: (base) => ({ ...base, color: '#e0e0e0' }),
+                    input: (base) => ({ ...base, color: '#e0e0e0' }), // For typed text
+                    placeholder: (base) => ({ ...base, color: '#a0a0a0' }),
+                    singleValue: (base) => ({ ...base, color: '#e0e0e0' }), // If not isMulti
+                  }}
+                />
               </div>
             ) : (
               <div className="no-data">No miners available</div>
