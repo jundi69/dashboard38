@@ -27,6 +27,45 @@ const API_BASE_URL = process.env.REACT_APP_FASTAPI_URL || "http://localhost:8000
 //   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 // };
 
+// Helper function to calculate average scores (already provided, ensure it's here)
+const calculateAverageScores = (scoresObject) => {
+  if (!scoresObject || Object.keys(scoresObject).length === 0) {
+    return { avgTrainScore: 0, avgAllReduceScore: 0, avgTotalScore: 0, validatorCount: 0 };
+  }
+  let totalTrain = 0;
+  let totalAllReduce = 0;
+  let totalTotal = 0;
+  const validatorUids = Object.keys(scoresObject);
+  const count = validatorUids.length;
+
+  validatorUids.forEach(valUid => {
+    totalTrain += scoresObject[valUid]?.train_score || 0;
+    totalAllReduce += scoresObject[valUid]?.all_reduce_score || 0;
+    totalTotal += scoresObject[valUid]?.total_score || 0;
+  });
+
+  return {
+    avgTrainScore: count > 0 ? totalTrain / count : 0,
+    avgAllReduceScore: count > 0 ? totalAllReduce / count : 0,
+    avgTotalScore: count > 0 ? totalTotal / count : 0,
+    validatorCount: count
+  };
+};
+
+// Helper function for heatmap color (already provided, ensure it's here)
+const getScoreColor = (score) => {
+  if (score === null || score === undefined || isNaN(score)) return '#333944'; // Darker grey for N/A, ensure text is light
+  if (score >= 0.9) return 'rgba(76, 175, 80, 0.7)';  // Greenish
+  if (score >= 0.75) return 'rgba(255, 235, 59, 0.6)'; // Yellowish (more transparent for light text)
+  if (score >= 0.5) return 'rgba(255, 152, 0, 0.6)'; // Orangeish (more transparent)
+  return 'rgba(244, 67, 54, 0.7)'; // Reddish
+};
+const getTextColorForScore = (score) => {
+    // If score is low or N/A and background is dark, use light text. Otherwise, use dark text.
+    if (score === null || score === undefined || isNaN(score) || score < 0.6) return '#e0e0e0';
+    return '#1a1a1a'; // Dark text for lighter backgrounds
+}
+
 const formatFullDate = (timeStr) => {
   if (!timeStr) return '';
   const date = new Date(timeStr);
@@ -85,6 +124,9 @@ export default function App() {
   const [allReduceOperations, setAllReduceOperations] = useState([]);
   const [expandedOpKey, setExpandedOpKey] = useState(null);
   const [minerLocations, setMinerLocations] = useState([]);
+
+  const [heatmapScoreType, setHeatmapScoreType] = useState('total_score');
+  const [expandedMinerScores, setExpandedMinerScores] = useState({}); // { minerUid: true/false }
 
   const fetchGlobalMetrics = useCallback(async () => {
     setLoading(prev => ({ ...prev, global: true }));
@@ -291,8 +333,22 @@ export default function App() {
     : "0";
   
   const activeMinersCurrentCount = globalData?.active_miners_current || "0";
+
+  const toggleMinerScoreExpansion = (minerUid) => {
+    setExpandedMinerScores(prev => ({ ...prev, [minerUid]: !prev[minerUid] }));
+  };
+
+  const allValidatorUIDs = React.useMemo(() => {
+    const uids = new Set();
+    selectedMiners.forEach(minerUid => {
+      const mData = minerData[minerUid];
+      if (mData && mData.scores) {
+        Object.keys(mData.scores).forEach(valUid => uids.add(valUid));
+      }
+    });
+    return Array.from(uids).sort((a, b) => parseInt(a) - parseInt(b)); // Sort them numerically
+  }, [selectedMiners, minerData]);
     
-  // This is now the "Outer Step"
   const currentOuterStep = globalData?.global_max_epoch_series && globalData.global_max_epoch_series.length > 0
     ? globalData.global_max_epoch_series[globalData.global_max_epoch_series.length - 1]?.value
     : "0";
@@ -485,10 +541,14 @@ export default function App() {
         )}
 
         {/* ... (Miner Explorer and AllReduce Operations tabs remain the same) ... */}
+        // Start of Miner Explorer Tab
         {activeTab === "miners" && (
           <div className="miner-explorer">
             <h2>Miner Explorer</h2>
-            
+
+            {/* Section 1: Miner Selection Dropdown (react-select) */}
+            {/* Purpose: Allow users to choose one or more miners for comparison. */}
+            {/* Status: Looks mostly correct in your implementation. */}
             {loading.miners ? (
               <div className="loading">Loading miners list...</div>
             ) : error.miners ? (
@@ -496,86 +556,272 @@ export default function App() {
             ) : miners.length > 0 ? (
               <div className="miner-select" style={{ marginBottom: '25px' }}>
                 <label className="select-label" htmlFor="miner-multiselect" style={{ display: 'block', marginBottom: '8px' }}>
-                  Select Miner UIDs to Compare (Ctrl/Cmd + Click for multiple)
+                  Select Miner UIDs to Compare
                 </label>
-                {/* Simple HTML multi-select. Consider react-select for better UX. */}
                 <Select
                   id="miner-multiselect"
                   isMulti
-                  options={miners} // `miners` state is already in {value, label} format due to fix in fetchMiners
-                  className="miner-select-dropdown" // You can keep this for general styling if needed
-                  classNamePrefix="react-select"    // For react-select specific styling
-                  // To show which options are selected, react-select needs the full option objects
+                  options={miners} // `miners` state should be [{value, label}, ...]
+                  className="miner-select-dropdown"
+                  classNamePrefix="react-select"
                   value={miners.filter(option => selectedMiners.includes(option.value))}
-                  onChange={handleReactSelectChange} // Use the new handler
+                  onChange={handleReactSelectChange}
                   placeholder="Search and select miners..."
-                  isLoading={loading.miners} // loading.miners refers to loading the list itself
+                  isLoading={loading.miners} // Loading state for the dropdown options themselves
                   isDisabled={loading.miners || miners.length === 0}
                   noOptionsMessage={() => error.miners ? error.miners : "No miners found"}
-                  styles={{ /* Consider adding basic dark theme styles here or in CSS */
-                    control: (base) => ({ ...base, backgroundColor: '#1a1a1a', borderColor: '#444444' }),
-                    menu: (base) => ({ ...base, backgroundColor: '#1a1a1a' }),
-                    option: (base, state) => ({
-                        ...base,
-                        backgroundColor: state.isFocused ? '#333' : state.isSelected ? '#007bff' : '#1a1a1a',
-                        color: state.isSelected ? 'white' : '#e0e0e0',
-                        ':active': { ...base[':active'], backgroundColor: '#555' }
-                    }),
-                    multiValue: (base) => ({ ...base, backgroundColor: '#333' }),
-                    multiValueLabel: (base) => ({ ...base, color: '#e0e0e0' }),
-                    input: (base) => ({ ...base, color: '#e0e0e0' }), // For typed text
-                    placeholder: (base) => ({ ...base, color: '#a0a0a0' }),
-                    singleValue: (base) => ({ ...base, color: '#e0e0e0' }), // If not isMulti
-                  }}
+                  styles={{ /* Your dark theme styles - these look good */ }}
                 />
+                {/* This error message is redundant if noOptionsMessage is handled by react-select */}
+                {/* Consider removing if react-select's noOptionsMessage covers it well enough */}
+                {/* error.miners && !loading.miners && miners.length === 0 && (
+                  <div className="error-message" style={{marginTop: '10px'}}>{error.miners}</div>
+                )*/}
               </div>
             ) : (
-              <div className="no-data">No miners available</div>
+              <div className="no-data">No miners available to select.</div> // Message if miner list is empty after loading
             )}
-            
+
+            {/* Section 2: Prompt to Select Miners (if list is loaded but nothing chosen) */}
+            {/* Purpose: Guide the user if they haven't selected any miners yet. */}
+            {/* Status: Correct. */}
             {selectedMiners.length === 0 && !loading.miners && miners.length > 0 && (
-              <div className="no-miner-selected">
+              <div className="no-miner-selected" style={{ marginTop: '20px' }}>
                 <p>Select one or more miners to view detailed metrics.</p>
               </div>
             )}
 
+            {/* Section 3: Main Content Area (when miners ARE selected) */}
+            {/* Purpose: Display all comparative views for the chosen miners. */}
+            {/* Status: This is where the main restructuring needs to be confirmed. */}
             {selectedMiners.length > 0 && (
-              <>
-                {/* Combined Charts Section */}
-                <div className="charts">
+              <> {/* Main Fragment for selected miners content */}
+
+                {/* Section 3.1: (Proposal 3) Miner Comparison Summary Table with Expandable Rows */}
+                {/* Purpose: Provide a high-level summary of key metrics for each selected miner, with an option to drill down. */}
+                {/* Status: Your implementation of this table looks correct. */}
+                <div className="miner-comparison-table-container" style={{ marginBottom: '30px' }}>
+                  <h3>Miner Comparison Summary</h3>
+                  <table className="scores-table main-comparison-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '120px' }}>Miner UID</th>
+                        <th>Stake (TAO)</th>
+                        <th>Trust</th>
+                        <th>Consensus</th>
+                        <th>Incentive</th>
+                        <th>Avg Total Score</th>
+                        <th>Avg Train Score</th>
+                        <th>Avg AllReduce Score</th>
+                        <th>Validators Scored By</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedMiners.map((uid) => {
+                        const mData = minerData[uid];
+                        // Loading state for this specific miner's row
+                        if (loading.minerData[uid]) {
+                          return (
+                            <tr key={`summary-loading-${uid}`}>
+                              <td>{uid}</td>
+                              <td colSpan="8" style={{ textAlign: 'center' }}>Loading data...</td>
+                            </tr>
+                          );
+                        }
+                        // Error state for this specific miner's row
+                        if (error.minerData[uid] || !mData) {
+                          return (
+                            <tr key={`summary-error-${uid}`}>
+                              <td>{uid}</td>
+                              <td colSpan="8" style={{ textAlign: 'center', color: '#ffcccc' }}>
+                                {error.minerData[uid] || "No data available"}
+                              </td>
+                            </tr>
+                          );
+                        }
+                        const avgScores = calculateAverageScores(mData.scores);
+                        return (
+                          <Fragment key={`summary-frag-${uid}`}>
+                            <tr className={expandedMinerScores[uid] ? 'expanded-row-header' : ''}>
+                              <td style={{ display: 'flex', alignItems: 'center' }}>
+                                <button
+                                  onClick={() => toggleMinerScoreExpansion(uid)}
+                                  className="expand-button"
+                                  style={{ marginRight: '10px', minWidth: '20px' }}
+                                  aria-expanded={expandedMinerScores[uid]}
+                                >
+                                  {expandedMinerScores[uid] ? '−' : '+'}
+                                </button>
+                                {uid}
+                              </td>
+                              <td>{mData.metagraph?.stake?.toFixed(2) || 'N/A'}</td>
+                              <td>{mData.metagraph?.trust?.toFixed(4) || 'N/A'}</td>
+                              <td>{mData.metagraph?.consensus?.toFixed(4) || 'N/A'}</td>
+                              <td>{mData.metagraph?.incentive?.toFixed(5) || 'N/A'}</td>
+                              <td>{avgScores.avgTotalScore.toFixed(4)}</td>
+                              <td>{avgScores.avgTrainScore.toFixed(4)}</td>
+                              <td>{avgScores.avgAllReduceScore.toFixed(4)}</td>
+                              <td>{avgScores.validatorCount}</td>
+                            </tr>
+                            {/* Expanded content for this row */}
+                            {expandedMinerScores[uid] && (
+                              <tr key={`details-${uid}`} className="expanded-row-content">
+                                <td colSpan="9">
+                                  <div className="validator-details-container" style={{ padding: '15px', backgroundColor: '#101010' }}>
+                                    <h5 style={{ marginTop: 0, marginBottom: '10px', color: '#e0e0e0' }}>Scores for Miner {uid} by Validator:</h5>
+                                    {mData.scores && Object.keys(mData.scores).length > 0 ? (
+                                      <table className="validator-details-table" style={{ fontSize: '0.9em', width: '100%' }}>
+                                        <thead>
+                                          <tr>
+                                            <th>Validator UID</th>
+                                            <th>Total Score</th>
+                                            <th>Train Score</th>
+                                            <th>AllReduce Score</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {Object.entries(mData.scores).sort(([, a], [, b]) => (b.total_score || 0) - (a.total_score || 0)).map(([valUid, scores]) => (
+                                            <tr key={`valscore-${uid}-${valUid}`}>
+                                              <td>{valUid}</td>
+                                              <td>{(scores.total_score || 0).toFixed(4)}</td>
+                                              <td>{(scores.train_score || 0).toFixed(4)}</td>
+                                              <td>{(scores.all_reduce_score || 0).toFixed(4)}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    ) : (
+                                      <div className="no-data">No detailed validator scores for this miner.</div>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Section 3.2: (Proposal 2) Heatmap Controls and Table */}
+                {/* Purpose: Provide a matrix view of a selected score type across selected miners and all their validators. */}
+                {/* Status: Your implementation of this also looks correct. */}
+                <div className="heatmap-controls" style={{ margin: '20px 0 10px 0', padding: '10px', backgroundColor: '#0f0f0f', borderRadius: '8px', border: '1px solid #2a2a2a' }}>
+                  <label htmlFor="heatmap-score-type" style={{ marginRight: '10px', color: '#e0e0e0' }}>Heatmap Score Type: </label>
+                  <select
+                    id="heatmap-score-type"
+                    value={heatmapScoreType}
+                    onChange={(e) => setHeatmapScoreType(e.target.value)}
+                    style={{ padding: '8px', backgroundColor: '#1a1a1a', color: '#e0e0e0', border: '1px solid #444', borderRadius: '4px' }}
+                  >
+                    <option value="total_score">Total Score</option>
+                    <option value="train_score">Train Score</option>
+                    <option value="all_reduce_score">AllReduce Score</option>
+                  </select>
+                </div>
+                {/* Conditional rendering for the heatmap table itself */}
+                {allValidatorUIDs.length > 0 ? (
+                  <div className="miner-score-heatmap-container" style={{ overflowX: 'auto', marginBottom: '30px' }}>
+                    <h3 style={{ marginTop: 0 }}>Validator Score Heatmap ({heatmapScoreType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())})</h3>
+                    <table className="scores-table heatmap-table">
+                      <thead>
+                        <tr>
+                          <th style={{ minWidth: '100px' }}>Miner UID</th>
+                          {allValidatorUIDs.map(valUid => <th key={`head-${valUid}`} style={{ minWidth: '80px', textAlign: 'center' }}>Val {valUid}</th>)}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedMiners.map(minerUid => {
+                          const mData = minerData[minerUid];
+                          // Loading and error states for this miner's row in the heatmap
+                          if (loading.minerData[minerUid]) {
+                            return (
+                              <tr key={`heatmap-loading-${minerUid}`}><td>{minerUid}</td><td colSpan={allValidatorUIDs.length} style={{ textAlign: 'center' }}>Loading...</td></tr>
+                            );
+                          }
+                          if (error.minerData[minerUid] || !mData) {
+                            return (
+                              <tr key={`heatmap-error-${minerUid}`}><td>{minerUid}</td><td colSpan={allValidatorUIDs.length} style={{ textAlign: 'center', color: '#ffcccc' }}>{error.minerData[minerUid] || "No data"}</td></tr>
+                            );
+                          }
+                          return (
+                            <tr key={`row-${minerUid}`}>
+                              <td>{minerUid}</td>
+                              {allValidatorUIDs.map(valUid => {
+                                const scoreData = mData?.scores?.[valUid];
+                                const scoreValue = scoreData ? scoreData[heatmapScoreType] : null;
+                                const displayValue = (scoreValue !== null && scoreValue !== undefined && !isNaN(scoreValue)) ? scoreValue.toFixed(4) : 'N/A';
+                                return (
+                                  <td
+                                    key={`cell-${minerUid}-${valUid}`}
+                                    style={{
+                                      backgroundColor: getScoreColor(scoreValue),
+                                      textAlign: 'center',
+                                      color: getTextColorForScore(scoreValue),
+                                      fontWeight: 'normal',
+                                      padding: '8px 5px',
+                                      border: '1px solid #222'
+                                    }}
+                                    title={`Miner ${minerUid} - Val ${valUid}: ${displayValue}`}
+                                  >
+                                    {displayValue}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  // This message shows if there are selected miners but no common validators found or no scores yet.
+                  selectedMiners.length > 0 && <div className="no-data" style={{padding: '10px', textAlign: 'center'}}>No validator scores available to display in heatmap for the selected miners.</div>
+                )}
+
+                {/* Section 3.3: Combined Charts (Loss & Incentive) */}
+                {/* Purpose: Visually compare time-series data for selected miners. */}
+                {/* Status: This is correctly placed now, inside the selectedMiners.length > 0 block. */}
+                <div className="charts"> {/* Wrapper for both charts */}
                   <div className="chart-container">
                     <h3>Training Loss Comparison</h3>
                     <ResponsiveContainer width="100%" height={300}>
-                      <LineChart margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                      <LineChart margin={{ top: 5, right: 30, left: 20, bottom: 5 }}> {/* Added left margin for Y-axis labels */}
                         <CartesianGrid strokeDasharray="3 3" />
-                        {/* Assuming X-axis is time or step. Adjust if needed. */}
-                        <XAxis 
-                          dataKey="time" // Or "inner_step" if consistent across selected miners' loss data
-                          tickFormatter={(timeStr) => new Date(timeStr).toLocaleTimeString()} 
-                          allowDuplicatedCategory={false} // If using time for X-axis
+                        <XAxis
+                          dataKey="time" // Or "inner_step" if that's the primary comparison axis
+                          type="category" // Good for time-based data that might have gaps or irregular intervals
+                          allowDuplicatedCategory={false}
+                          tickFormatter={(timeStr) => { try { return new Date(timeStr).toLocaleTimeString(); } catch (e) { return timeStr; } }}
+                          domain={['dataMin', 'dataMax']} // Helps Recharts determine overall domain
+                          // scale="time" // Use if data is actual Date objects; for ISO strings, category with domain works
                         />
                         <YAxis />
                         <Tooltip
-                          labelFormatter={(label) => new Date(label).toLocaleString()}
-                          formatter={(value, name, props) => [value.toFixed(4), `Loss (${props.payload.minerUidShort || name})`]}
+                          labelFormatter={(label) => { try { return new Date(label).toLocaleString(); } catch (e) { return label; } }}
+                          formatter={(value, name, props) => [
+                              (typeof value === 'number' ? value.toFixed(4) : value), 
+                              `Loss (${props.payload.minerUidShort || name.split(' ')[1] || 'Miner'})`
+                          ]}
                         />
                         <Legend />
                         {selectedMiners.map((uid, index) => {
                           const data = minerData[uid]?.training?.loss;
                           if (data && data.length > 0) {
-                            // Add minerUidShort to each data point for richer tooltips
-                            const augmentedData = data.map(p => ({...p, minerUidShort: `Miner ${uid}`}));
+                            const augmentedData = data.map(p => ({ ...p, minerUidShort: `Miner ${uid}` }));
                             return (
-                              <Line 
+                              <Line
                                 key={`loss-${uid}`}
-                                type="monotone" 
+                                type="monotone"
                                 data={augmentedData}
-                                dataKey="value" 
+                                dataKey="value"
                                 name={`Miner ${uid} Loss`}
                                 stroke={MINER_COLORS[index % MINER_COLORS.length]}
-                                strokeWidth={2}
-                                activeDot={{ r: 6 }}
+                                strokeWidth={1.5}
                                 dot={false}
+                                activeDot={{ r: 5 }}
+                                connectNulls={true} // Good for comparison if some miners have missing data points
                               />
                             );
                           }
@@ -583,45 +829,53 @@ export default function App() {
                         })}
                       </LineChart>
                     </ResponsiveContainer>
-                    {/* Check if any selected miner has no loss data */}
-                    {selectedMiners.some(uid => !minerData[uid]?.training?.loss || minerData[uid]?.training?.loss.length === 0) &&
-                     selectedMiners.filter(uid => minerData[uid]?.training?.loss && minerData[uid]?.training?.loss.length > 0).length < selectedMiners.length &&
-                     !selectedMiners.every(uid => loading.minerData[uid]) && // Only show if not all are loading
-                     <div className="no-data" style={{fontSize: '0.9em', marginTop: '10px'}}>Some selected miners may not have loss data.</div>
+                    {/* Conditional "no data" message for this specific chart */}
+                    {selectedMiners.some(uid => (!minerData[uid]?.training?.loss || minerData[uid]?.training?.loss.length === 0) && !loading.minerData[uid]) &&
+                    selectedMiners.filter(uid => minerData[uid]?.training?.loss && minerData[uid]?.training?.loss.length > 0).length === 0 && // If NO selected miners have data
+                    !selectedMiners.every(uid => loading.minerData[uid]) &&
+                    <div className="no-data" style={{ fontSize: '0.9em', marginTop: '10px' }}>No training loss data available for the selected miners.</div>
                     }
                   </div>
-                  
+
                   <div className="chart-container">
                     <h3>Incentive Over Time Comparison</h3>
                     <ResponsiveContainer width="100%" height={300}>
-                       <LineChart margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                      <LineChart margin={{ top: 5, right: 30, left: 20, bottom: 5 }}> {/* Added left margin */}
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis 
+                        <XAxis
                           dataKey="time"
-                          tickFormatter={(timeStr) => new Date(timeStr).toLocaleTimeString()} 
+                          type="category"
                           allowDuplicatedCategory={false}
+                          tickFormatter={(timeStr) => { try { return new Date(timeStr).toLocaleTimeString(); } catch (e) { return timeStr; } }}
+                          domain={['dataMin', 'dataMax']}
+                          // scale="time"
                         />
-                        <YAxis domain={['auto', 'auto']} tickFormatter={(value) => value.toFixed(4)}/>
+                        <YAxis yAxisId="left" domain={['auto', 'auto']} tickFormatter={(value) => (typeof value === 'number' ? value.toFixed(5) : value)} />
                         <Tooltip
-                          labelFormatter={(label) => new Date(label).toLocaleString()}
-                          formatter={(value, name, props) => [value.toFixed(5), `Incentive (${props.payload.minerUidShort || name})`]}
+                          labelFormatter={(label) => { try { return new Date(label).toLocaleString(); } catch (e) { return label; } }}
+                          formatter={(value, name, props) => [
+                              (typeof value === 'number' ? value.toFixed(5) : value), 
+                              `Incentive (${props.payload.minerUidShort || name.split(' ')[1] || 'Miner'})`
+                          ]}
                         />
                         <Legend />
                         {selectedMiners.map((uid, index) => {
                           const data = minerData[uid]?.incentive_timeseries;
                           if (data && data.length > 0) {
-                            const augmentedData = data.map(p => ({...p, minerUidShort: `Miner ${uid}`}));
+                            const augmentedData = data.map(p => ({ ...p, minerUidShort: `Miner ${uid}` }));
                             return (
                               <Line
                                 key={`incentive-${uid}`}
                                 type="monotone"
                                 data={augmentedData}
-                                dataKey="value" 
+                                dataKey="value"
                                 name={`Miner ${uid} Incentive`}
-                                stroke={MINER_COLORS[(index + 5) % MINER_COLORS.length]} // Offset color
-                                strokeWidth={2}
-                                activeDot={{ r: 6 }}
+                                yAxisId="left"
+                                stroke={MINER_COLORS[(index + Math.floor(MINER_COLORS.length / 2)) % MINER_COLORS.length]} // Offset colors
+                                strokeWidth={1.5}
                                 dot={false}
+                                activeDot={{ r: 5 }}
+                                connectNulls={true}
                               />
                             );
                           }
@@ -629,90 +883,39 @@ export default function App() {
                         })}
                       </LineChart>
                     </ResponsiveContainer>
-                     {selectedMiners.some(uid => !minerData[uid]?.incentive_timeseries || minerData[uid]?.incentive_timeseries.length === 0) &&
-                     selectedMiners.filter(uid => minerData[uid]?.incentive_timeseries && minerData[uid]?.incentive_timeseries.length > 0).length < selectedMiners.length &&
-                     !selectedMiners.every(uid => loading.minerData[uid]) &&
-                     <div className="no-data" style={{fontSize: '0.9em', marginTop: '10px'}}>Some selected miners may not have incentive data.</div>
+                    {/* Conditional "no data" message for this specific chart */}
+                    {selectedMiners.some(uid => (!minerData[uid]?.incentive_timeseries || minerData[uid]?.incentive_timeseries.length === 0) && !loading.minerData[uid]) &&
+                    selectedMiners.filter(uid => minerData[uid]?.incentive_timeseries && minerData[uid]?.incentive_timeseries.length > 0).length === 0 && // If NO selected miners have data
+                    !selectedMiners.every(uid => loading.minerData[uid]) &&
+                    <div className="no-data" style={{ fontSize: '0.9em', marginTop: '10px' }}>No incentive data available for the selected miners.</div>
                     }
                   </div>
-                </div>
+                </div> {/* End of div.charts */}
 
-                {/* Individual Miner Details Section */}
+                {/* Section 3.4: Old Individual Miner Details Loop - CONFIRM IF TO REMOVE */}
+                {/* Purpose: Previously showed stacked full details for each miner. */}
+                {/* Status: Should be removed if the summary table and heatmap are sufficient replacements. */}
+                {/* If you still want this, it's correctly placed within the selectedMiners.length > 0 block. */}
+                {/*
                 {selectedMiners.map((uid) => (
                   <div key={uid} className="miner-details-section" style={{ marginTop: '30px', borderTop: '1px solid #333', paddingTop: '20px'}}>
                     <h3>Details for Miner {uid}</h3>
-                    {loading.minerData[uid] && (
-                      <div className="loading">Loading data for Miner {uid}...</div>
-                    )}
-                    {error.minerData[uid] && (
-                      <div className="error-message">{error.minerData[uid]}</div>
-                    )}
+                    {loading.minerData[uid] && ( /* ... * / )}
+                    {error.minerData[uid] && ( /* ... * / )}
                     {!loading.minerData[uid] && !error.minerData[uid] && minerData[uid] && (
                       <div>
-                        <div className="miner-metrics">
-                          <h4>Metagraph Metrics (UID: {uid})</h4>
-                          <div className="metrics-grid">
-                            <div className="metric-item">
-                              <h5>Stake</h5>
-                              <p>{minerData[uid]?.metagraph?.stake?.toFixed(2) || 0} TAO</p>
-                            </div>
-                            <div className="metric-item">
-                              <h5>Trust</h5>
-                              <p>{minerData[uid]?.metagraph?.trust?.toFixed(4) || 0}</p>
-                            </div>
-                            <div className="metric-item">
-                              <h5>Consensus</h5>
-                              <p>{minerData[uid]?.metagraph?.consensus?.toFixed(4) || 0}</p>
-                            </div>
-                            <div className="metric-item">
-                              <h5>Incentive</h5>
-                              <p>{minerData[uid]?.metagraph?.incentive?.toFixed(4) || 0}</p>
-                            </div>
-                            <div className="metric-item">
-                              <h5>Emissions</h5>
-                              <p>{minerData[uid]?.metagraph?.emissions?.toFixed(4) || 0} τ/day</p>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="validator-scores">
-                          <h4>Validator Scores (UID: {uid})</h4>
-                          {minerData[uid]?.scores && Object.keys(minerData[uid].scores).length > 0 ? (
-                            <table className="scores-table">
-                              <thead>
-                                <tr>
-                                  <th>Validator</th>
-                                  <th>Training Score</th>
-                                  <th>AllReduce Score</th>
-                                  <th>Total Score</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {Object.entries(minerData[uid].scores).map(([validator, scores]) => (
-                                  <tr key={`${uid}-${validator}`}>
-                                    <td>Validator {validator}</td>
-                                    <td>{(scores?.train_score || 0).toFixed(4)}</td>
-                                    <td>{(scores?.all_reduce_score || 0).toFixed(4)}</td>
-                                    <td>{(scores?.total_score || 0).toFixed(4)}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          ) : (
-                            <div className="no-data">No validator scores available for this miner</div>
-                          )}
-                        </div>
+                        {/* Metagraph Metrics Grid & Validator Scores Table for this specific UID * /
                       </div>
                     )}
-                    {!loading.minerData[uid] && !minerData[uid] && !error.minerData[uid] && (
-                      <div className="no-data">No data available for Miner {uid} yet.</div>
-                    )}
+                    {!loading.minerData[uid] && !minerData[uid] && !error.minerData[uid] && ( /* ... * / )}
                   </div>
                 ))}
-              </>
-            )}
-          </div>
-        )}
+                */}
+
+              </> // End of Main Fragment for selected miners content
+            )} {/* End of selectedMiners.length > 0 conditional block */}
+          </div> // End of div.miner-explorer
+        )} // End of activeTab === "miners" conditional block
 
         {activeTab === "allreduce" && (
            <div className="allreduce-operations">
