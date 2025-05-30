@@ -541,7 +541,6 @@ export default function App() {
         )}
 
         {/* ... (Miner Explorer and AllReduce Operations tabs remain the same) ... */}
-        // Start of Miner Explorer Tab
         {activeTab === "miners" && (
           <div className="miner-explorer">
             <h2>Miner Explorer</h2>
@@ -600,7 +599,7 @@ export default function App() {
                 {/* Section 3.1: (Proposal 3) Miner Comparison Summary Table with Expandable Rows */}
                 {/* Purpose: Provide a high-level summary of key metrics for each selected miner, with an option to drill down. */}
                 {/* Status: Your implementation of this table looks correct. */}
-                <div className="miner-comparison-table-container" style={{ marginBottom: '30px' }}>
+                <div className="data-section-container" >
                   <h3>Miner Comparison Summary</h3>
                   <table className="scores-table main-comparison-table">
                     <thead>
@@ -707,18 +706,21 @@ export default function App() {
                 {/* Section 3.2: (Proposal 2) Heatmap Controls and Table */}
                 {/* Purpose: Provide a matrix view of a selected score type across selected miners and all their validators. */}
                 {/* Status: Your implementation of this also looks correct. */}
-                <div className="heatmap-controls" style={{ margin: '20px 0 10px 0', padding: '10px', backgroundColor: '#0f0f0f', borderRadius: '8px', border: '1px solid #2a2a2a' }}>
-                  <label htmlFor="heatmap-score-type" style={{ marginRight: '10px', color: '#e0e0e0' }}>Heatmap Score Type: </label>
-                  <select
-                    id="heatmap-score-type"
-                    value={heatmapScoreType}
-                    onChange={(e) => setHeatmapScoreType(e.target.value)}
-                    style={{ padding: '8px', backgroundColor: '#1a1a1a', color: '#e0e0e0', border: '1px solid #444', borderRadius: '4px' }}
-                  >
-                    <option value="total_score">Total Score</option>
-                    <option value="train_score">Train Score</option>
-                    <option value="all_reduce_score">AllReduce Score</option>
-                  </select>
+                <div className="data-section-container">
+                  <div className="heatmap-controls" style={{ margin: '20px 0 10px 0', padding: '10px', backgroundColor: '#0f0f0f', borderRadius: '8px', border: '1px solid #2a2a2a' }}>
+                    <label htmlFor="heatmap-score-type" style={{ marginRight: '10px', color: '#e0e0e0' }}>Heatmap Score Type: </label>
+                    <select
+                      id="heatmap-score-type"
+                      value={heatmapScoreType}
+                      onChange={(e) => setHeatmapScoreType(e.target.value)}
+                      style={{ padding: '8px', backgroundColor: '#1a1a1a', color: '#e0e0e0', border: '1px solid #444', borderRadius: '4px' }}
+                    >
+                      <option value="total_score">Total Score</option>
+                      <option value="train_score">Train Score</option>
+                      <option value="all_reduce_score">AllReduce Score</option>
+                    </select>
+                  </div>
+                  <h3 style={{ marginTop: '10px' }}></h3>
                 </div>
                 {/* Conditional rendering for the heatmap table itself */}
                 {allValidatorUIDs.length > 0 ? (
@@ -774,6 +776,7 @@ export default function App() {
                         })}
                       </tbody>
                     </table>
+                    <div className="heatmap-legend"></div>
                   </div>
                 ) : (
                   // This message shows if there are selected miners but no common validators found or no scores yet.
@@ -783,7 +786,7 @@ export default function App() {
                 {/* Section 3.3: Combined Charts (Loss & Incentive) */}
                 {/* Purpose: Visually compare time-series data for selected miners. */}
                 {/* Status: This is correctly placed now, inside the selectedMiners.length > 0 block. */}
-                <div className="charts"> {/* Wrapper for both charts */}
+                <div className="charts data-section-container"> {/* Wrapper for both charts */}
                   <div className="chart-container">
                     <h3>Training Loss Comparison</h3>
                     <ResponsiveContainer width="100%" height={300}>
@@ -915,7 +918,6 @@ export default function App() {
               </> // End of Main Fragment for selected miners content
             )} {/* End of selectedMiners.length > 0 conditional block */}
           </div> // End of div.miner-explorer
-        )} // End of activeTab === "miners" conditional block
 
         {activeTab === "allreduce" && (
            <div className="allreduce-operations">
