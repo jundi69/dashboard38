@@ -92,6 +92,7 @@ const MINER_COLORS = [
 
 
 export default function App() {
+  const [initialMinersLoaded, setInitialMinersLoaded] = useState(false); // New state
   const [activeTab, setActiveTab] = useState("global");
   const [selectedMiners, setSelectedMiners] = useState([]); 
   const [loading, setLoading] = useState({
@@ -241,7 +242,51 @@ export default function App() {
     }
   }, []);
 
+    const fetchMinersAndSetTop10 = useCallback(async () => {
+    setLoading(prev => ({ ...prev, miners: true, initialMinersLoading: true })); // Optional: separate loading state
+    setError(prev => ({ ...prev, miners: null }));
+    try {
+      const response = await axios.get(`${API_BASE_URL}/metrics/miners`);
+      const allMinerUids = Array.isArray(response.data) ? response.data.map(uid => uid.toString()) : [];
+      
+      const minerOptions = allMinerUids.map(uid => ({ value: uid, label: `Miner ${uid}` }));
+      setMiners(minerOptions);
 
+      if (allMinerUids.length === 0) {
+        setSelectedMiners([]);
+        setInitialMinersLoaded(true); // Mark as loaded even if empty
+        setLoading(prev => ({ ...prev, miners: false, initialMinersLoading: false }));
+        return;
+      }
+
+      // N+1 fetch for incentives (consider backend optimization)
+      const minersWithIncentive = await Promise.all(
+        allMinerUids.map(async (uid) => {
+          try {
+            const detailResponse = await axios.get(`${API_BASE_URL}/metrics/miner/${uid}?include_scores=false&include_training=false&include_resources=false`);
+            return { uid, incentive: detailResponse.data?.metagraph?.incentive || 0 };
+          } catch (e) { return { uid, incentive: 0 }; }
+        })
+      );
+
+      minersWithIncentive.sort((a, b) => b.incentive - a.incentive);
+      const top10Uids = minersWithIncentive.slice(0, 10).map(m => m.uid);
+      
+      setSelectedMiners(top10Uids); // This will trigger the other useEffect
+      setInitialMinersLoaded(true);
+
+    } catch (err) {
+      console.error("Error fetching and processing miners for top 10:", err);
+      setError(prev => ({ ...prev, miners: "Failed to load initial miner data." }));
+      setMiners([]);
+      setSelectedMiners([]);
+      setInitialMinersLoaded(true); // Still mark as loaded to prevent retries
+    } finally {
+      setLoading(prev => ({ ...prev, miners: false, initialMinersLoading: false }));
+    }
+  }, []); // Dependencies: API_BASE_URL (if not constant), setLoading, setError, setMiners, setSelectedMiners, setInitialMinersLoaded
+
+  // Effect for Global Tab
   useEffect(() => {
     if (activeTab === "global") {
       fetchGlobalMetrics();
@@ -249,76 +294,51 @@ export default function App() {
     }
   }, [activeTab, fetchGlobalMetrics, fetchMinerLocations]);
 
-  useEffect(() => {
-    if (activeTab === "miners" && selectedMiners.length > 0) {
-      selectedMiners.forEach(uid => {
-        // Fetch only if not already loading and (data doesn't exist or an error occurred previously)
-        if (!loading.minerData[uid] && (!minerData[uid] || error.minerData[uid])) {
-          fetchMinerData(uid);
-        }
-      });
-      // Cleanup: Remove data for miners no longer selected
-      const currentSelectedUIDs = new Set(selectedMiners);
-      setMinerData(prevMinerData => {
-          const nextMinerData = { ...prevMinerData };
-          Object.keys(nextMinerData).forEach(uid => {
-              if (!currentSelectedUIDs.has(uid)) {
-                  delete nextMinerData[uid];
-              }
-          });
-          return nextMinerData;
-      });
-
-    } else if (activeTab === "miners" && selectedMiners.length === 0) {
-      setMinerData({}); // Clear all miner data if no miners are selected
-    }
-  }, [activeTab, selectedMiners, fetchMinerData, loading.minerData, error.minerData, minerData]); // Added minerData to deps for cleanup logic
-
+  // Effect for AllReduce Tab
   useEffect(() => {
     if (activeTab === "allreduce") {
       fetchAllReduceOperations();
     }
   }, [activeTab, fetchAllReduceOperations]);
 
-  // useEffect(() => {
-  //   if (selectedMiner && activeTab === "miners") {
-  //     fetchMinerData(selectedMiner);
-  //   }
-  // }, [selectedMiner, activeTab, fetchMinerData]);
-
+  // EFFECT 1 (for Miners Tab): Fetch initial list and set top 10 selected.
   useEffect(() => {
-    if (activeTab === "miners") {
-      fetchMiners(); // Fetch the list of all available miners to populate the select dropdown
+    if (activeTab === "miners" && !initialMinersLoaded) {
+      fetchMinersAndSetTop10();
     }
-  }, [activeTab, fetchMiners]);
+  }, [activeTab, initialMinersLoaded, fetchMinersAndSetTop10]);
 
 
-  // Effect for Miners Tab - Fetching DATA for SELECTED miners
+  // EFFECT 2 (for Miners Tab): Fetch data FOR the selectedMiners array.
   useEffect(() => {
-    if (activeTab === "miners") { // Only run if miners tab is active
+    // Only proceed if the tab is 'miners' AND the initial loading of the miner list/top10 is complete.
+    if (activeTab === "miners" && initialMinersLoaded) {
       if (selectedMiners.length > 0) {
         selectedMiners.forEach(uid => {
+          // Fetch if not currently loading for this UID, AND
+          // (data for this UID doesn't exist OR there was a previous error for this UID)
           if (!loading.minerData[uid] && (!minerData[uid] || error.minerData[uid])) {
             fetchMinerData(uid);
           }
         });
 
-        const currentSelectedUIDs = new Set(selectedMiners.map(String));
+        // Cleanup: Remove data for miners that are no longer in selectedMiners
+        const currentSelectedUIDs = new Set(selectedMiners.map(String)); // Ensure UIDs are strings for comparison
         setMinerData(prevMinerData => {
-            const nextMinerData = { ...prevMinerData };
-            Object.keys(nextMinerData).forEach(uidKey => {
-                if (!currentSelectedUIDs.has(uidKey)) {
-                    delete nextMinerData[uidKey];
-                }
-            });
-            return nextMinerData;
+          const nextMinerData = { ...prevMinerData };
+          Object.keys(nextMinerData).forEach(uidKey => { // uidKey from Object.keys() is a string
+            if (!currentSelectedUIDs.has(uidKey)) {
+              delete nextMinerData[uidKey];
+            }
+          });
+          return nextMinerData;
         });
-
-      } else { 
-        setMinerData({}); 
+      } else {
+        // If no miners are selected (e.g., user cleared selection), clear all detailed miner data.
+        setMinerData({});
       }
     }
-  }, [activeTab, selectedMiners, fetchMinerData, loading.minerData, error.minerData]);
+  }, [activeTab, selectedMiners, fetchMinerData, loading.minerData, error.minerData, initialMinersLoaded]);
 
   const handleReactSelectChange = (selectedOptions) => {
     setSelectedMiners(selectedOptions ? selectedOptions.map(option => option.value) : []);
@@ -709,7 +729,7 @@ export default function App() {
                 {/* Status: Your implementation of this also looks correct. */}
                 <div className="data-section-container">
                   <div className="heatmap-controls" style={{ margin: '20px 0 10px 0', padding: '10px', backgroundColor: '#0f0f0f', borderRadius: '8px', border: '1px solid #2a2a2a' }}>
-                    <label htmlFor="heatmap-score-type" style={{ marginRight: '10px', color: '#e0e0e0' }}>Heatmap Score Type: </label>
+                    <label htmlFor="heatmap-score-type" style={{ marginRight: '10px', color: '#e0e0e0' }}>Heatmap Score: </label>
                     <select
                       id="heatmap-score-type"
                       value={heatmapScoreType}
@@ -722,67 +742,67 @@ export default function App() {
                     </select>
                   </div>
                   <h3 style={{ marginTop: '10px' }}></h3>
-                </div>
-                {/* Conditional rendering for the heatmap table itself */}
-                {allValidatorUIDs.length > 0 ? (
-                  <div className="miner-score-heatmap-container" style={{ overflowX: 'auto', marginBottom: '30px' }}>
-                    <h3 style={{ marginTop: 0 }}>Validator Score Heatmap ({heatmapScoreType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())})</h3>
-                    <table className="scores-table heatmap-table">
-                      <thead>
-                        <tr>
-                          <th style={{ minWidth: '100px' }}>Miner UID</th>
-                          {allValidatorUIDs.map(valUid => <th key={`head-${valUid}`} style={{ minWidth: '80px', textAlign: 'center' }}>Val {valUid}</th>)}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedMiners.map(minerUid => {
-                          const mData = minerData[minerUid];
-                          // Loading and error states for this miner's row in the heatmap
-                          if (loading.minerData[minerUid]) {
+                  
+                  {/* Conditional rendering for the heatmap table itself */}
+                  {allValidatorUIDs.length > 0 ? (
+                    <div className="miner-score-heatmap-container" style={{ overflowX: 'auto', marginBottom: '30px' }}>
+                      <table className="scores-table heatmap-table">
+                        <thead>
+                          <tr>
+                            <th style={{ minWidth: '100px' }}>Miner UID</th>
+                            {allValidatorUIDs.map(valUid => <th key={`head-${valUid}`} style={{ minWidth: '80px', textAlign: 'center' }}>Val {valUid}</th>)}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedMiners.map(minerUid => {
+                            const mData = minerData[minerUid];
+                            // Loading and error states for this miner's row in the heatmap
+                            if (loading.minerData[minerUid]) {
+                              return (
+                                <tr key={`heatmap-loading-${minerUid}`}><td>{minerUid}</td><td colSpan={allValidatorUIDs.length} style={{ textAlign: 'center' }}>Loading...</td></tr>
+                              );
+                            }
+                            if (error.minerData[minerUid] || !mData) {
+                              return (
+                                <tr key={`heatmap-error-${minerUid}`}><td>{minerUid}</td><td colSpan={allValidatorUIDs.length} style={{ textAlign: 'center', color: '#ffcccc' }}>{error.minerData[minerUid] || "No data"}</td></tr>
+                              );
+                            }
                             return (
-                              <tr key={`heatmap-loading-${minerUid}`}><td>{minerUid}</td><td colSpan={allValidatorUIDs.length} style={{ textAlign: 'center' }}>Loading...</td></tr>
-                            );
-                          }
-                          if (error.minerData[minerUid] || !mData) {
-                            return (
-                              <tr key={`heatmap-error-${minerUid}`}><td>{minerUid}</td><td colSpan={allValidatorUIDs.length} style={{ textAlign: 'center', color: '#ffcccc' }}>{error.minerData[minerUid] || "No data"}</td></tr>
-                            );
-                          }
-                          return (
-                            <tr key={`row-${minerUid}`}>
-                              <td>{minerUid}</td>
-                              {allValidatorUIDs.map(valUid => {
-                                const scoreData = mData?.scores?.[valUid];
-                                const scoreValue = scoreData ? scoreData[heatmapScoreType] : null;
-                                const displayValue = (scoreValue !== null && scoreValue !== undefined && !isNaN(scoreValue)) ? scoreValue.toFixed(4) : 'N/A';
-                                return (
-                                  <td
+                              <tr key={`row-${minerUid}`}>
+                                <td>{minerUid}</td>
+                                {allValidatorUIDs.map(valUid => {
+                                  const scoreData = mData?.scores?.[valUid];
+                                  const scoreValue = scoreData ? scoreData[heatmapScoreType] : null;
+                                  const displayValue = (scoreValue !== null && scoreValue !== undefined && !isNaN(scoreValue)) ? scoreValue.toFixed(4) : 'N/A';
+                                  return (
+                                    <td
                                     key={`cell-${minerUid}-${valUid}`}
-                                    style={{
-                                      backgroundColor: getScoreColor(scoreValue),
-                                      textAlign: 'center',
-                                      color: getTextColorForScore(scoreValue),
-                                      fontWeight: 'normal',
-                                      padding: '8px 5px',
-                                      border: '1px solid #222'
-                                    }}
-                                    title={`Miner ${minerUid} - Val ${valUid}: ${displayValue}`}
-                                  >
-                                    {displayValue}
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                    <div className="heatmap-legend"></div>
-                  </div>
-                ) : (
-                  // This message shows if there are selected miners but no common validators found or no scores yet.
-                  selectedMiners.length > 0 && <div className="no-data" style={{padding: '10px', textAlign: 'center'}}>No validator scores available to display in heatmap for the selected miners.</div>
-                )}
+                                      style={{
+                                        backgroundColor: getScoreColor(scoreValue),
+                                        textAlign: 'center',
+                                        color: getTextColorForScore(scoreValue),
+                                        fontWeight: 'normal',
+                                        padding: '8px 5px',
+                                        border: '1px solid #222'
+                                      }}
+                                      title={`Miner ${minerUid} - Val ${valUid}: ${displayValue}`}
+                                      >
+                                      {displayValue}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                      <div className="heatmap-legend"></div>
+                    </div>
+                  ) : (
+                    // This message shows if there are selected miners but no common validators found or no scores yet.
+                    selectedMiners.length > 0 && <div className="no-data" style={{padding: '10px', textAlign: 'center'}}>No validator scores available to display in heatmap for the selected miners.</div>
+                  )}
+                </div>
 
                 {/* Section 3.3: Combined Charts (Loss & Incentive) */}
                 {/* Purpose: Visually compare time-series data for selected miners. */}
