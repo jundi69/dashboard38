@@ -541,6 +541,7 @@ export default function App() {
         )}
 
         {/* ... (Miner Explorer and AllReduce Operations tabs remain the same) ... */}
+        
         {activeTab === "miners" && (
           <div className="miner-explorer">
             <h2>Miner Explorer</h2>
@@ -918,6 +919,7 @@ export default function App() {
               </> // End of Main Fragment for selected miners content
             )} {/* End of selectedMiners.length > 0 conditional block */}
           </div> // End of div.miner-explorer
+        )}
 
         {activeTab === "allreduce" && (
            <div className="allreduce-operations">
