@@ -480,7 +480,6 @@ code {
   flex: 3; /* Map takes more space */
   min-width: 300px; /* Minimum width before wrapping or shrinking too much */
   /* The map component itself will define its background and appearance */
-  height: 500px;
   position: relative;
 }
 .map-column h3 { /* If you have a title above the map */
