@@ -463,8 +463,7 @@ export default function App() {
             ) : (
               <div className="charts-row">
                 <div className="chart-container half-width">
-                  {/* Removed Outer Step from title */}
-                  <h3>Miner Loss (vs Inner Step)</h3>
+                  <h3>Loos</h3>
                   {globalData?.all_miner_losses && Object.keys(globalData.all_miner_losses).length > 0 ? (
                     <ResponsiveContainer width="100%" height={300}>
                       <LineChart margin={{ top: 5, right: 30, left: 0, bottom: 5 }}> {/* Adjusted right margin for YAxis labels */}
@@ -481,7 +480,6 @@ export default function App() {
                         {/* <Tooltip
                           labelFormatter={stepTooltipLabelFormatter} // Use custom formatter
                           formatter={(value) => value.toFixed(4)} // Format loss value */}
-                        <Tooltip />
                         <Legend />
                         {Object.entries(globalData.all_miner_losses).map(([minerUid, lossData], index) => (
                           lossData && lossData.length > 0 && (
@@ -495,7 +493,7 @@ export default function App() {
                               strokeWidth={1.5}
                               dot={false}
                               activeDot={{ r: 5 }}
-                              isAnimationActive={false} // Optional: disable animation for performance
+                              isAnimationActive={true} // Optional: disable animation for performance
                             />
                           )
                         ))}
