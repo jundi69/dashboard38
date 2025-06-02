@@ -82,33 +82,42 @@ const stepTooltipLabelFormatter = (label, payload) => {
   return `Step: ${label}`;
 };
 
-const CustomChartTooltip = ({ active, payload, label }) => {
+const CustomChartTooltip = ({ active, payload, label, labelFormatterName }) => { // Added labelFormatterName
   if (active && payload && payload.length) {
     const MAX_ITEMS_TO_SHOW = 5;
-    
-    // The payload is an array of data points for each line at the hovered x-coordinate.
-    // We'll take the first MAX_ITEMS_TO_SHOW.
-    // You could also sort them by value if desired, e.g., payload.sort((a, b) => b.value - a.value).slice(0, MAX_ITEMS_TO_SHOW);
     const displayedPayload = payload.slice(0, MAX_ITEMS_TO_SHOW);
 
-    // Re-use the stepTooltipLabelFormatter logic for the label if desired, or keep it simple
-    let formattedLabel = `Step: ${label}`;
-    if (payload[0] && payload[0].payload) { // Check if full data point is available
-        const point = payload[0].payload;
-        formattedLabel = `Step: ${label}${point.epoch !== undefined ? `, Epoch: ${point.epoch}` : ''}`;
-        // Removed time from here for brevity, can be added back if needed
-    }
+    let formattedLabel = String(label); // Default to string version of label
 
+    // Custom label formatting based on context
+    if (labelFormatterName === 'globalStepEpoch') { // For Global Overview Loss/Perplexity
+        if (payload[0] && payload[0].payload) {
+            const point = payload[0].payload;
+            formattedLabel = `Step: ${label}${point.epoch !== undefined ? `, Epoch: ${point.epoch}` : ''}`;
+        } else {
+            formattedLabel = `Step: ${label}`;
+        }
+    } else if (labelFormatterName === 'minerExplorerLoss') { // For Miner Explorer Loss
+         if (payload[0] && payload[0].payload) {
+            const point = payload[0].payload;
+            formattedLabel = `Step: ${label}${point.epoch !== undefined ? `, Epoch: ${point.epoch}` : ''}${point.time ? ` (${new Date(point.time).toLocaleTimeString()})` : ''}`;
+        } else {
+            formattedLabel = `Step: ${label}`;
+        }
+    } else if (labelFormatterName === 'minerExplorerIncentive') { // For Miner Explorer Incentive (label is unixTime)
+        if (typeof label === 'number') {
+             formattedLabel = new Date(label).toLocaleString();
+        }
+    }
+    // Add more conditions for other charts if needed
 
     return (
-      // Apply styles similar to .deck-tooltip via CSS or inline if specific overrides are needed
       <div className="recharts-custom-tooltip">
         <p className="recharts-custom-tooltip-label">{formattedLabel}</p>
         <ul className="recharts-custom-tooltip-item-list">
           {displayedPayload.map((entry, index) => (
             <li key={`tooltip-item-${index}`} className="recharts-custom-tooltip-item" style={{ color: entry.color }}>
-              {/* entry.name is like "UID 123 Loss", entry.value is the actual loss value */}
-              {`${entry.name}: ${typeof entry.value === 'number' ? entry.value.toFixed(4) : entry.value}`}
+              {`${entry.name}: ${typeof entry.value === 'number' ? entry.value.toFixed(4) : String(entry.value)}`}
             </li>
           ))}
           {payload.length > MAX_ITEMS_TO_SHOW && (
@@ -841,7 +850,7 @@ export default function App() {
                   
                   {/* --- TRAINING LOSS CHART CONTAINER --- */}
                   <div className="chart-container">
-                    <h3>Training Loss Comparison</h3>
+                    <h3>Loss</h3>
                     <ResponsiveContainer width="100%" height={300}>
                       <LineChart margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" />
@@ -851,17 +860,11 @@ export default function App() {
                           domain={['dataMin', 'dataMax']}
                           allowDuplicatedCategory={false}
                         />
-                        <YAxis />
-                        <Tooltip
-                          labelFormatter={(label, payload) => {
-                            if (payload && payload.length > 0 && payload[0].payload) {
-                              const point = payload[0].payload;
-                              return `Step: ${label}${point.epoch !== undefined ? `, Epoch: ${point.epoch}` : ''}${point.time ? ` (${new Date(point.time).toLocaleTimeString()})` : ''}`;
-                            }
-                            return `Step: ${label}`;
-                          }}
-                          formatter={(value, name, props) => [(typeof value === 'number' ? value.toFixed(4) : value), `Loss (${props.payload.minerUidShort || name.split(' ')[1] || 'Miner'})`]}
+                        <YAxis 
+                          type="number"       
+                          domain={['dataMin', 'dataMax']}
                         />
+                        <Tooltip content={<CustomChartTooltip labelFormatterName="minerExplorerLoss" />} /> {/* <--- USE CUSTOM TOOLTIP */}
                         <Legend />
                         {selectedMiners.map((uid, index) => {
                           const lossData = minerData[uid]?.training?.loss;
@@ -899,13 +902,7 @@ export default function App() {
                           }}
                         />
                         <YAxis yAxisId="left" domain={['auto', 'auto']} tickFormatter={(value) => (typeof value === 'number' ? value.toFixed(5) : value)} />
-                        <Tooltip
-                          labelFormatter={(unixTime) => {
-                            if (typeof unixTime !== 'number') return 'Unknown Time';
-                            return new Date(unixTime).toLocaleString();
-                          }}
-                          formatter={(value, name, props) => [(typeof value === 'number' ? value.toFixed(5) : value), `Incentive (${props.payload.minerUidShort || name.split(' ')[1] || 'Miner'})`]}
-                        />
+                        <Tooltip content={<CustomChartTooltip labelFormatterName="minerExplorerIncentive" />} /> {/* <--- USE CUSTOM TOOLTIP */}
                         <Legend />
                         {selectedMiners.map((uid, index) => {
                           const incentiveData = minerData[uid]?.incentive_timeseries;
