@@ -82,6 +82,47 @@ const stepTooltipLabelFormatter = (label, payload) => {
   return `Step: ${label}`;
 };
 
+const CustomChartTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    const MAX_ITEMS_TO_SHOW = 5;
+    
+    // The payload is an array of data points for each line at the hovered x-coordinate.
+    // We'll take the first MAX_ITEMS_TO_SHOW.
+    // You could also sort them by value if desired, e.g., payload.sort((a, b) => b.value - a.value).slice(0, MAX_ITEMS_TO_SHOW);
+    const displayedPayload = payload.slice(0, MAX_ITEMS_TO_SHOW);
+
+    // Re-use the stepTooltipLabelFormatter logic for the label if desired, or keep it simple
+    let formattedLabel = `Step: ${label}`;
+    if (payload[0] && payload[0].payload) { // Check if full data point is available
+        const point = payload[0].payload;
+        formattedLabel = `Step: ${label}${point.epoch !== undefined ? `, Epoch: ${point.epoch}` : ''}`;
+        // Removed time from here for brevity, can be added back if needed
+    }
+
+
+    return (
+      // Apply styles similar to .deck-tooltip via CSS or inline if specific overrides are needed
+      <div className="recharts-custom-tooltip">
+        <p className="recharts-custom-tooltip-label">{formattedLabel}</p>
+        <ul className="recharts-custom-tooltip-item-list">
+          {displayedPayload.map((entry, index) => (
+            <li key={`tooltip-item-${index}`} className="recharts-custom-tooltip-item" style={{ color: entry.color }}>
+              {/* entry.name is like "UID 123 Loss", entry.value is the actual loss value */}
+              {`${entry.name}: ${typeof entry.value === 'number' ? entry.value.toFixed(4) : entry.value}`}
+            </li>
+          ))}
+          {payload.length > MAX_ITEMS_TO_SHOW && (
+            <li className="recharts-custom-tooltip-item" style={{ color: '#9098a5', marginTop: '5px' }}>
+              {`... and ${payload.length - MAX_ITEMS_TO_SHOW} more`}
+            </li>
+          )}
+        </ul>
+      </div>
+    );
+  }
+  return null;
+};
+
 
 const MINER_COLORS = [
   "#8884d8", "#82ca9d", "#ffc658", "#ff7300", "#00C49F",
@@ -480,7 +521,7 @@ export default function App() {
                         {/* <Tooltip
                           labelFormatter={stepTooltipLabelFormatter} // Use custom formatter
                           formatter={(value) => value.toFixed(4)} // Format loss value */}
-                        <Tooltip />
+                        <Tooltip content={<CustomChartTooltip />} />
                         <Legend />
                         {Object.entries(globalData.all_miner_losses).map(([minerUid, lossData], index) => (
                           lossData && lossData.length > 0 && (
@@ -522,7 +563,7 @@ export default function App() {
                         {/* <Tooltip
                           labelFormatter={stepTooltipLabelFormatter}
                           formatter={(value) => value.toFixed(2)} // Format perplexity */}
-                        <Tooltip />
+                        <Tooltip content={<CustomChartTooltip />} />
                         <Legend />
                         {Object.entries(globalData.all_miner_perplexities).map(([minerUid, perplexityData], index) => (
                           perplexityData && perplexityData.length > 0 && (

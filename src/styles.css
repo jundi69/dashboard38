@@ -445,21 +445,42 @@ code {
 
 /* Recharts specific dark mode overrides */
 .recharts-legend-item-text { color: #b0b8c5 !important; }
-.recharts-tooltip-wrapper {
-  background-color: #181a1f !important;
-  border: 1px solid #333740 !important;
-  border-radius: 4px !important;
-  color: #e0e6f0 !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+.recharts-custom-tooltip {
+  background-color: rgba(10, 16, 26, 0.9); /* Match Deck.gl */
+  color: #e0e6f0;                          /* Match Deck.gl */
+  padding: 10px 15px;                      /* Match Deck.gl */
+  border-radius: 4px;                      /* Match Deck.gl */
+  font-family: Montserrat, sans-serif;     /* Match Deck.gl */
+  font-size: 13px;                         /* Match Deck.gl */
+  line-height: 1.5;                        /* Match Deck.gl */
+  max-width: 320px;                        /* Match Deck.gl */
+  border: 1px solid #204060;               /* Match Deck.gl */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);  /* Match Deck.gl */
+  /* Recharts tooltips don't use pre-wrap by default for simple list items */
 }
-.recharts-tooltip-label {
-  color: #f0f5ff !important;
-  margin-bottom: 8px !important; /* More space */
-  font-weight: 600 !important;
-  border-bottom: 1px solid #333740;
+.recharts-custom-tooltip-label {
+  color: #f0f5ff; /* Slightly brighter for label, like original Recharts style */
+  margin: 0 0 8px 0; /* Adjusted margin */
+  font-weight: 600;
+  border-bottom: 1px solid #333740; /* Separator line */
   padding-bottom: 5px;
+  display: block;
+  text-align: left;
 }
-.recharts-tooltip-item { color: #c0c8d5 !important; }
+.recharts-custom-tooltip-item-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+.recharts-custom-tooltip-item {
+  /* color is set inline by JS based on line color, or a default grey for '... more' */
+  display: block;
+  padding: 1px 0; /* Minimal padding */
+  text-align: left;
+  white-space: nowrap; /* Prevent long UIDs from wrapping if possible */
+  overflow: hidden;
+  text-overflow: ellipsis; /* Add ellipsis for very long names if they still overflow max-width */
+}
 .recharts-cartesian-axis-tick-value { fill: #9098a5 !important; }
 .recharts-cartesian-grid-horizontal line,
 .recharts-cartesian-grid-vertical line {
@@ -537,6 +558,22 @@ code {
   text-align: left; /* Or center if preferred */
 }
 /* .miner-select-dropdown is now mostly handled by react-select specific classes */
+
+.deck-tooltip {
+  background-color: rgba(10, 16, 26, 0.9) !important;
+  color: #e0e6f0 !important;
+  padding: 10px 15px !important;
+  border-radius: 4px !important;
+  font-family: Montserrat, sans-serif !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  max-width: 320px !important;
+  white-space: pre-wrap !important; /* DeckGL uses this for \n */
+  border: 1px solid #204060 !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+  z-index: 1001 !important;
+  pointer-events: none !important;
+}
 
 /* NEW: General container for data sections within Miner Explorer */
 .data-section-container {
