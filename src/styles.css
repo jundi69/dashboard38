@@ -554,22 +554,6 @@ code {
   padding-bottom: 10px;
 }
 
-.deck-tooltip {
-  background-color: rgba(10, 16, 26, 0.9) !important; /* Dark, slightly transparent background */
-  color: #e0e6f0 !important;                          /* Light text color */
-  padding: 10px 15px !important;                      /* Comfortable padding */
-  border-radius: 4px !important;                      /* Rounded corners */
-  font-family: Montserrat, sans-serif !important;     /* Match your app's font */
-  font-size: 13px !important;                         /* Slightly smaller for tooltips */
-  line-height: 1.5 !important;                        /* Good readability */
-  max-width: 320px !important;                        /* Prevent overly wide tooltips */
-  white-space: pre-wrap !important;                   /* Respects \n for newlines in tooltip text */
-  border: 1px solid #204060 !important;               /* Subtle border, matches legend */
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;  /* Softer shadow for depth */
-  z-index: 1001 !important;                           /* Ensure tooltip is above other elements like legend */
-  pointer-events: none !important;                    /* Tooltip itself should not capture mouse events */
-}
-
 /* Generic Loading, Error, No Data Messages */
 .loading, .error-message, .no-data, .no-miner-selected {
   padding: 20px;

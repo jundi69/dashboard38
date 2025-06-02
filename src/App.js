@@ -463,7 +463,7 @@ export default function App() {
             ) : (
               <div className="charts-row">
                 <div className="chart-container half-width">
-                  <h3>Loos</h3>
+                  <h3>Loss</h3>
                   {globalData?.all_miner_losses && Object.keys(globalData.all_miner_losses).length > 0 ? (
                     <ResponsiveContainer width="100%" height={300}>
                       <LineChart margin={{ top: 5, right: 30, left: 0, bottom: 5 }}> {/* Adjusted right margin for YAxis labels */}
@@ -488,7 +488,7 @@ export default function App() {
                               type="monotone"
                               data={lossData} // Each miner gets their own data array
                               dataKey="value" // Y-axis value
-                              name={`Miner ${minerUid} Loss`}
+                              name={`UID ${minerUid}`}
                               stroke={MINER_COLORS[index % MINER_COLORS.length]}
                               strokeWidth={1.5}
                               dot={false}
@@ -529,7 +529,7 @@ export default function App() {
                               type="monotone"
                               data={perplexityData}
                               dataKey="value"
-                              name={`Miner ${minerUid} Perplexity`}
+                              name={`UID ${minerUid}`}
                               stroke={MINER_COLORS[index % MINER_COLORS.length]}
                               strokeWidth={1.5}
                               dot={false}
@@ -548,8 +548,6 @@ export default function App() {
             )}
           </div>
         )}
-
-        {/* ... (Miner Explorer and AllReduce Operations tabs remain the same) ... */}
         
         {activeTab === "miners" && (
           <div className="miner-explorer">
