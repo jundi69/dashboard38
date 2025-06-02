@@ -968,15 +968,15 @@ export default function App() {
             ) : (
               <>
                 <div className="operations-table-container">
-                  <h3>Recent Operations Log</h3>
+                  <h3>Operations Log</h3>
                   {allReduceOperations.length > 0 ? (
                     <table className="operations-table main-operations-table">
                       <thead>
                         <tr>
                           <th style={{ width: '30px' }}></th>
-                          <th>Operation ID</th>
+                          <th>Block Number</th>
                           <th>Epoch</th>
-                          <th>Time (Earliest Report)</th>
+                          <th>Time</th>
                           <th>Reporting Validators</th>
                         </tr>
                       </thead>
@@ -1054,7 +1054,7 @@ export default function App() {
                 </div>
 
                 {allReduceOperations.length > 0 ? (
-                  <div className="charts">
+                  <div className="charts-section">
                     <div className="chart-container">
                       <h3>Average Success Rate</h3>
                       <ResponsiveContainer width="100%" height={300}>
