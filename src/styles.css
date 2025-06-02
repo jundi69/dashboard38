@@ -106,113 +106,141 @@ code {
 /* Section Titles */
 .global-view h2,
 .miner-explorer h2,
-
-.allreduce-operations .operations-table-container {
-  background-color: #0c0c0c; /* Slightly off-black, distinct from main page bg if needed */
-  padding: 20px 25px;      /* Generous padding */
-  border-radius: 8px;
-  border: 1px solid #282828; /* Softer border */
-  margin-bottom: 30px;
+.allreduce-operations {
+  /* No specific width constraints here, let content flow */
 }
 
-.allreduce-operations .operations-table-container h3 { /* "Recent Operations Log" */
-  color: #f0f0f0; /* Brighter for title */
-  font-size: 1.5em; /* Prominent but not overly large */
+/* Container for the Operations Log Table */
+.allreduce-operations .operations-log-section { /* NEW class for clarity */
+  background-color: #0f0f0f; /* Consistent with other data sections */
+  padding: 20px 25px;
+  border-radius: 8px;
+  border: 1px solid #2a2a2a; 
+  margin-bottom: 30px; 
+}
+
+.allreduce-operations .operations-log-section h3 { /* "Recent Operations Log" */
+  color: #f0f0f0;
+  font-size: 1.5em;
   margin-top: 0; 
   margin-bottom: 20px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #333333; /* Separator for title */
+  border-bottom: 1px solid #333333;
   text-align: left;
 }
 
 /* Main Operations Log Table (assuming it has .scores-table class) */
 .allreduce-operations .main-operations-table {
-  /* Base styles from .scores-table are good. We'll ensure consistency. */
-  /* Make sure .scores-table has appropriate background, border, etc. */
+  /* Base styles from .scores-table. We want this table to feel substantial. */
+  font-size: 1em; /* Ensure it's not too small by default */
 }
 
 .allreduce-operations .main-operations-table th {
-  background-color: #1e1e1e; /* Slightly lighter than row for emphasis */
+  background-color: #1e1e1e; 
   color: #e0e0e0;
   font-weight: 600;
-  padding: 12px 15px; /* Good padding for headers */
+  padding: 12px 15px;
   white-space: nowrap;
+  font-size: 0.95em; /* Slightly smaller than base if needed, but readable */
 }
 
 .allreduce-operations .main-operations-table td {
-  padding: 10px 15px; /* Consistent padding */
-  color: #c0c0c0;    /* Softer grey for data */
-  border-bottom: 1px solid #222222; /* Subtle row separator */
+  padding: 12px 15px; /* Increase padding for better readability */
+  color: #c8c8c8;    
+  border-bottom: 1px solid #252525; /* Slightly more visible row separator */
+  font-size: 0.92em; /* Data cells slightly smaller than headers */
 }
 .allreduce-operations .main-operations-table tr:last-child td {
-    border-bottom: none; /* Remove border from last row's cells */
+    border-bottom: none;
 }
-
 .allreduce-operations .main-operations-table tbody tr:hover {
-  background-color: #1a1a1a; /* Subtle hover */
+  background-color: #1f1f22; /* Darker, distinct hover */
 }
 
 /* Expanded Row Content (Validator Reports) */
-.allreduce-operations .expanded-row-content td {
-  padding: 0 !important; /* Remove padding from the container TD for full-width nested content */
-  border-top: 2px solid #444 !important; /* Stronger visual break for expanded section */
-  border-bottom: 2px solid #444 !important; /* Match top for balance if it's the last row */
+.allreduce-operations .expanded-row-content td { /* The TD that HOLDS the nested details */
+  padding: 0 !important; 
+  border-top: 2px solid #007bff !important; /* Use a theme accent color for the top border of expanded */
+  /* border-bottom: 2px solid #444 !important; */ /* Remove bottom if it looks too heavy */
+}
+/* Remove extra left/right borders if the table is full width */
+.allreduce-operations .expanded-row-header td:first-child,
+.allreduce-operations .expanded-row-content td:first-child {
+    border-left: none;
+}
+.allreduce-operations .expanded-row-header td:last-child,
+.allreduce-operations .expanded-row-content td:last-child {
+    border-right: none;
 }
 
+
 .allreduce-operations .validator-details-container { /* The div inside the expanded cell */
-  padding: 20px 25px; /* Match container padding */
-  background-color: #131313; /* Darker, distinct background for nested details */
-  /* No extra borders needed here if the TD above provides them */
+  padding: 25px 30px; /* More generous padding inside expanded */
+  background-color: #181a1f; /* A good dark shade for nested details */
 }
 
 .allreduce-operations .validator-details-container h4 { /* "Validator Reports for Operation..." */
-  color: #dadada;
-  font-size: 1.25em; /* Slightly smaller than main log title */
+  color: #e0e6f0; /* Brighter for emphasis */
+  font-size: 1.3em; 
   margin-top: 0;
-  margin-bottom: 18px;
+  margin-bottom: 20px; /* More space */
   text-align: left;
-  /* No border needed if background provides enough separation */
+  border-bottom: 1px solid #333740;
+  padding-bottom: 10px;
 }
 
 /* Nested Validator Details Table */
 .allreduce-operations .validator-details-table {
   width: 100%;
   border-collapse: collapse;
-  /* No background needed, inherits from .validator-details-container */
+  font-size: 0.95em; /* Make nested table more readable, not too small */
 }
 
 .allreduce-operations .validator-details-table th {
-  background-color: #252525; /* Header for nested table */
-  color: #d0d0d0;
-  font-weight: 500; /* Less heavy than main table headers */
-  padding: 10px 12px;
-  font-size: 0.9em;
+  background-color: #252830; 
+  color: #d8e0ea;
+  font-weight: 500; 
+  padding: 10px 15px; /* Good padding */
   text-align: left;
-  border-bottom: 1px solid #383838;
+  border-bottom: 1px solid #3a3f4a;
 }
 
 .allreduce-operations .validator-details-table td {
-  padding: 8px 12px;
-  font-size: 0.88em;
-  color: #b0b0b0; /* Slightly muted for nested data */
-  border-bottom: 1px solid #2a2a2a; /* Subtle row separators for nested table */
+  padding: 10px 15px; /* Match header padding */
+  color: #b0b8c5; 
+  border-bottom: 1px solid #2c2f36; 
 }
 .allreduce-operations .validator-details-table tr:last-child td {
     border-bottom: none;
 }
-
 .allreduce-operations .validator-details-table tbody tr:hover {
-  background-color: #1c1c1c; /* Subtle hover for nested rows */
+  background-color: #22252c; 
 }
 
-/* Ensure expand button remains visible and accessible */
-.allreduce-operations .expand-button {
-  /* Existing styles are likely fine, just ensure good contrast */
-  background-color: #333;
-  border-color: #555;
+
+/* --- Charts Section in AllReduce Operations --- */
+.allreduce-operations .charts-section { /* NEW class for the charts wrapper */
+  display: flex;
+  flex-wrap: wrap; /* Allow charts to wrap on smaller screens */
+  gap: 20px;       /* Space between charts */
+  margin-bottom: 30px;
 }
-.allreduce-operations .expand-button:hover {
-  background-color: #444;
+
+.allreduce-operations .charts-section .chart-container {
+  flex: 1; /* Each chart tries to take equal space */
+  min-width: 400px; /* Minimum width before wrapping - adjust as needed */
+  background-color: #0f0f0f; /* Consistent chart bg */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #2a2a2a;
+}
+
+.allreduce-operations .charts-section .chart-container h3 {
+  color: #e0e0e0;
+  font-size: 1.3em; /* Match other chart titles */
+  margin-top: 0;
+  margin-bottom: 20px;
+  text-align: center;
 }
 
 /* Sub-section Titles (e.g., within Miner Explorer) */
