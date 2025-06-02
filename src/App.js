@@ -905,70 +905,49 @@ export default function App() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis
                         dataKey="time"
-                        type="category" // Keep as category for time strings
-                        interval="preserveStartEnd"
-                        allowDuplicatedCategory={false}
-                        // tickFormatter={(timeStr) => { 
-                        //     try { 
-                        //         if (!timeStr) return ''; // Handle undefined/null timeStr
-                        //         return new Date(timeStr).toLocaleTimeString(); 
-                        //     } catch (e) { return timeStr; } 
-                        // }}
-                        tickFormatter={(timeStr, index) => {
-                          console.log(`Incentive XAxis tickFormatter - Input: '${timeStr}', Type: ${typeof timeStr}, Index: ${index}`);
-                          if (!timeStr || typeof timeStr !== 'string') {
-                            // console.warn("tickFormatter: invalid timeStr input");
-                            return '';
-                          }
-                          try {
-                            const date = new Date(timeStr);
-                            if (date.toString() === "Invalid Date") {
-                              // console.error(`tickFormatter: Parsed to INVALID DATE: '${timeStr}'`);
-                              return 'Invalid'; // Make it obvious on the chart
-                            }
-                            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                          } catch (e) {
-                            // console.error(`tickFormatter: Exception for '${timeStr}':`, e);
-                            return 'Error'; // Make it obvious
-                          }
+                        type="number" // Keep as category for time strings
+                        scale="time"
+                        tickFormatter={(unixTime) => {
+                          // unixTime is now a number (milliseconds)
+                          if (typeof unixTime !== 'number') return ''; // Should always be number now
+                          return new Date(unixTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                         }}
                         domain={['dataMin', 'dataMax']}
                       />
                       <YAxis yAxisId="left" domain={['auto', 'auto']} tickFormatter={(value) => (typeof value === 'number' ? value.toFixed(5) : value)} />
                       <Tooltip
-                        labelFormatter={(label) => { // label is a time string from dataKey="time"
-                          console.log(`Incentive Tooltip labelFormatter - Input: '${label}', Type: ${typeof label}`);
-                          if (!label || typeof label !== 'string') {
-                            // console.warn("labelFormatter: invalid label input");
-                            return 'Unknown Time';
-                          }
-                          try {
-                            const date = new Date(label);
-                            if (date.toString() === "Invalid Date") {
-                              // console.error(`labelFormatter: Parsed to INVALID DATE: '${label}'`);
-                              return 'Invalid Time'; // Make it obvious
-                            }
-                            return date.toLocaleString();
-                          } catch (e) {
-                            // console.error(`labelFormatter: Exception for '${label}':`, e);
-                            return 'Time Error'; // Make it obvious
-                          }
+                        labelFormatter={(unixTime) => { // label is now a Unix timestamp
+                          if (typeof unixTime !== 'number') return 'Unknown Time';
+                          return new Date(unixTime).toLocaleString();
                         }}
                       />
                       <Legend />
                       {selectedMiners.map((uid, index) => {
                         const incentiveData = minerData[uid]?.incentive_timeseries;
                         if (incentiveData && incentiveData.length > 0) {
-                           // Filter out points with invalid time if that's the issue
-                           const validIncentiveData = incentiveData.filter(p => p.time && typeof p.time === 'string');
-                           if(validIncentiveData.length === 0) return null;
+                          const validDataWithTimestamps = incentiveData
+                            .map(p => {
+                              if (!p.time || typeof p.time !== 'string') return null; // Skip if no time string
+                              const dateObj = new Date(p.time);
+                              if (dateObj.toString() === "Invalid Date") return null; // Skip invalid dates
+                              return {
+                                ...p,
+                                time: dateObj.getTime(), // Convert to Unix timestamp (milliseconds)
+                              };
+                            })
+                            .filter(p => p !== null); // Remove any points that were nullified
 
-                          const augmentedData = validIncentiveData.map(p => ({ ...p, minerUidShort: `Miner ${uid}` }));
+                          if (validDataWithTimestamps.length === 0) {
+                            // console.warn(`Miner UID ${uid} had incentiveData but no valid time points after conversion to timestamp.`);
+                            return null;
+                          }
+
+                          const augmentedData = validDataWithTimestamps.map(p => ({ ...p, minerUidShort: `Miner ${uid}` }));
                           return (
                             <Line
                               key={`incentive-${uid}`}
                               type="monotone"
-                              data={augmentedData}
+                              data={augmentedData} // Use data with numeric timestamps
                               dataKey="value"
                               name={`Miner ${uid} Incentive`}
                               yAxisId="left"
@@ -990,60 +969,6 @@ export default function App() {
                   !selectedMiners.every(uid => loading.minerData[uid]) &&
                   <div className="no-data" style={{ fontSize: '0.9em', marginTop: '10px' }}>No training loss data available for the selected miners.</div>
                   }
-                  </div>
-
-                  <div className="chart-container">
-                    <h3>Incentive</h3>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <LineChart margin={{ top: 5, right: 30, left: 20, bottom: 5 }}> {/* Added left margin */}
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis
-                          dataKey="time"
-                          type="category"
-                          allowDuplicatedCategory={false}
-                          tickFormatter={(timeStr) => { try { return new Date(timeStr).toLocaleTimeString(); } catch (e) { return timeStr; } }}
-                          domain={['dataMin', 'dataMax']}
-                          // scale="time"
-                        />
-                        <YAxis yAxisId="left" domain={['auto', 'auto']} tickFormatter={(value) => (typeof value === 'number' ? value.toFixed(5) : value)} />
-                        <Tooltip
-                          labelFormatter={(label) => { try { return new Date(label).toLocaleString(); } catch (e) { return label; } }}
-                          formatter={(value, name, props) => [
-                              (typeof value === 'number' ? value.toFixed(5) : value), 
-                              `Incentive (${props.payload.minerUidShort || name.split(' ')[1] || 'Miner'})`
-                          ]}
-                        />
-                        <Legend />
-                        {selectedMiners.map((uid, index) => {
-                          const data = minerData[uid]?.incentive_timeseries;
-                          if (data && data.length > 0) {
-                            const augmentedData = data.map(p => ({ ...p, minerUidShort: `Miner ${uid}` }));
-                            return (
-                              <Line
-                                key={`incentive-${uid}`}
-                                type="monotone"
-                                data={augmentedData}
-                                dataKey="value"
-                                name={`Miner ${uid} Incentive`}
-                                yAxisId="left"
-                                stroke={MINER_COLORS[(index + Math.floor(MINER_COLORS.length / 2)) % MINER_COLORS.length]} // Offset colors
-                                strokeWidth={1.5}
-                                dot={false}
-                                activeDot={{ r: 5 }}
-                                connectNulls={true}
-                              />
-                            );
-                          }
-                          return null;
-                        })}
-                      </LineChart>
-                    </ResponsiveContainer>
-                    {/* Conditional "no data" message for this specific chart */}
-                    {selectedMiners.some(uid => (!minerData[uid]?.incentive_timeseries || minerData[uid]?.incentive_timeseries.length === 0) && !loading.minerData[uid]) &&
-                    selectedMiners.filter(uid => minerData[uid]?.incentive_timeseries && minerData[uid]?.incentive_timeseries.length > 0).length === 0 && // If NO selected miners have data
-                    !selectedMiners.every(uid => loading.minerData[uid]) &&
-                    <div className="no-data" style={{ fontSize: '0.9em', marginTop: '10px' }}>No incentive data available for the selected miners.</div>
-                    }
                   </div>
                 </div> {/* End of div.charts */}
 
