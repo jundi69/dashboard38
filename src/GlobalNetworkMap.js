@@ -1,11 +1,10 @@
 // src/GlobalNetworkMap.js
-import React, { useEffect, useState }  from 'react';
+import React, { useEffect, useState }  from 'react'; // Removed useCallback as it wasn't used directly here for setHoverInfo anymore
 import DeckGL from '@deck.gl/react';
 import BaseMap from 'react-map-gl/maplibre';
 import maplibregl from 'maplibre-gl';
-import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers'; // LineLayer removed
+import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 
-// Option A: Truly minimal style (just a dark background)
 const MINIMAL_DARK_STYLE = {
   version: 8,
   name: "Minimal Dark Custom",
@@ -15,13 +14,12 @@ const MINIMAL_DARK_STYLE = {
       id: "background",
       type: "background",
       paint: {
-        "background-color": "#0A0F14", // Very dark blue/black
+        "background-color": "#0A0F14", 
       }
     }
   ]
 };
 
-// --- Legend Component (Updated) ---
 const Legend = () => {
   return (
     <div style={{
@@ -33,21 +31,21 @@ const Legend = () => {
       borderRadius: '4px',
       color: '#E0E0E0',
       fontSize: '12px',
-      zIndex: 1,
+      zIndex: 1000, // Ensure legend is above map but below tooltip
       fontFamily: 'monospace',
       border: '1px solid #204060'
     }}>
       <div><span style={{height: '10px', width: '10px', backgroundColor: 'rgba(255, 107, 35, 0.8)', borderRadius: '50%', display: 'inline-block', marginRight: '5px'}}></span> Miner Location (dot size indicates density)</div>
-      {/* Removed: <div style={{marginTop: '5px', color: '#A0A0A0'}}>Lines show connections</div> */}
     </div>
   );
 };
 
 
-const GlobalNetworkMap = ({ locations }) => {
+const GlobalNetworkMap = ({ locations, mapHeight = '500px' }) => {
   const [worldOutlines, setWorldOutlines] = useState(null);
+
   useEffect(() => {
-    fetch('/world_outlines.geojson') // ADJUST FILENAME if different
+    fetch('/world_outlines.geojson') 
       .then(response => {
         if (!response.ok) {
           throw new Error('Network response was not ok for world_outlines.geojson');
@@ -58,16 +56,20 @@ const GlobalNetworkMap = ({ locations }) => {
       .catch(error => console.warn("Could not load world outlines GeoJSON:", error));
   }, []);
 
-  const landOutlineLayer = worldOutlines && new GeoJsonLayer({
-    id: 'land-outline-layer',
-    data: worldOutlines,
-    stroked: true,
-    filled: true,
-    getFillColor: [20, 30, 40, 200], // Slightly transparent dark fill
-    getLineColor: [60, 100, 130, 200], // Muted blueish-grey lines
-    lineWidthMinPixels: 0.5,
-    pickable: false,
-  });
+  const landOutlineLayer = React.useMemo(() => {
+    if (!worldOutlines) return null;
+    return new GeoJsonLayer({
+      id: 'land-outline-layer',
+      data: worldOutlines,
+      stroked: true,
+      filled: true,
+      getFillColor: [20, 30, 40, 200], 
+      getLineColor: [60, 100, 130, 200], 
+      lineWidthMinPixels: 0.5,
+      pickable: false, // Land outlines don't need to be interactive
+    });
+  }, [worldOutlines]);
+
 
   const originalData = React.useMemo(() => {
     if (!locations || locations.length === 0) return [];
@@ -83,7 +85,9 @@ const GlobalNetworkMap = ({ locations }) => {
     if (!originalData || originalData.length === 0) return [];
     const aggregation = new Map();
     originalData.forEach(point => {
-      if (Array.isArray(point.position) && point.position.length === 2 && !point.position.some(isNaN)) {
+      if (Array.isArray(point.position) && point.position.length === 2 && 
+          typeof point.position[0] === 'number' && typeof point.position[1] === 'number' &&
+          !isNaN(point.position[0]) && !isNaN(point.position[1])) {
         const key = `${point.position[0].toFixed(5)},${point.position[1].toFixed(5)}`;
         if (!aggregation.has(key)) {
           aggregation.set(key, {
@@ -97,32 +101,38 @@ const GlobalNetworkMap = ({ locations }) => {
         const aggPoint = aggregation.get(key);
         aggPoint.count += 1;
         aggPoint.uids.push(point.uid);
+      } else {
+        // console.warn('Invalid point structure or lat/lon in GlobalNetworkMap:', point); // Optional: for debugging invalid points
       }
     });
     return Array.from(aggregation.values());
   }, [originalData]);
 
-  const scatterplotLayer = new ScatterplotLayer({
-    id: 'scatterplot-layer',
-    data: aggregatedData,
-    pickable: false, 
-    opacity: 0.9,
-    stroked: true,
-    filled: true,
-    radiusUnits: 'pixels', // Ensure radius is in pixels
-    radiusMinPixels: 2, 
-    radiusMaxPixels: 40, // Max size for a dot
-    lineWidthMinPixels: 1,
-    getPosition: d => d.position,
-    getFillColor: [255, 107, 35, 220], // Orange-red color for dots
-    getLineColor: [255, 255, 255, 150], // Whiteish outline for dots
-    // This function scales the radius of each dot based on the count of miners.
-    // Base size of 2px, plus a value proportional to the square root of the count.
-    // Adjust the multiplier (2.5 here) to change how rapidly dots grow with count.
-    getRadius: d => 2 + Math.sqrt(d.count) * 2.5, 
-  });
+  const scatterplotLayer = React.useMemo(() => {
+    if (!aggregatedData || aggregatedData.length === 0) return null;
+    return new ScatterplotLayer({
+      id: 'scatterplot-layer',
+      data: aggregatedData,
+      pickable: true,      // Enable picking for this layer
+      autoHighlight: true, // Highlights the dot on hover (can be true or based on a color function)
+      highlightColor: [255, 255, 255, 200], // Color for auto-highlight
+      opacity: 0.9,
+      stroked: true,
+      filled: true,
+      radiusUnits: 'pixels', 
+      radiusMinPixels: 2, 
+      radiusMaxPixels: 40, 
+      lineWidthMinPixels: 1,
+      getPosition: d => d.position,
+      getFillColor: [255, 107, 35, 220], 
+      getLineColor: [255, 255, 255, 150], 
+      getRadius: d => 2 + Math.sqrt(d.count) * 2.5, 
+      updateTriggers: { // If any accessor depends on external state not in `data`, list it here. Not strictly needed for current setup.
+          // getFillColor: [someExternalColorVar], 
+      }
+    });
+  }, [aggregatedData]);
 
-  // Removed lineData and connectionLayer logic
 
   const INITIAL_VIEW_STATE = {
     longitude: -0,
@@ -133,21 +143,49 @@ const GlobalNetworkMap = ({ locations }) => {
   };
 
   if (!locations || locations.length === 0) {
-    return <div className="no-data" style={{padding: "20px", textAlign: "center"}}>No location data input.</div>;
+    return <div className="no-data" style={{padding: "20px", textAlign: "center", height: mapHeight, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>No location data input.</div>;
   }
-  if (!aggregatedData || aggregatedData.length === 0) {
-    return <div className="no-data" style={{padding: "20px", textAlign: "center"}}>Location data provided, but no valid points to display. Check lat/lon values.</div>;
-  }
+  // This check is now implicitly handled by scatterplotLayer being null if aggregatedData is empty
+  // if (!aggregatedData || aggregatedData.length === 0) {
+  //   return <div className="no-data" style={{padding: "20px", textAlign: "center"}}>Location data provided, but no valid points to display. Check lat/lon values.</div>;
+  // }
 
-  // Updated layers array to remove connectionLayer
   const layers = [
     landOutlineLayer,
     scatterplotLayer,
-    // connectionLayer removed
   ].filter(Boolean);
 
+  const getTooltipContent = ({object}) => {
+    if (!object) {
+      return null;
+    }
+    const { city, country, count, uids } = object;
+    let tooltipText = '';
+    if (city && country) {
+      tooltipText += `${city}, ${country}\n`;
+    } else if (city) {
+      tooltipText += `${city}\n`;
+    } else if (country) {
+      tooltipText += `${country}\n`;
+    } else {
+      tooltipText += `Unknown Location\n`;
+    }
+    tooltipText += `Miners: ${count}\n`;
+    if (uids && uids.length > 0) {
+      const uidsToShow = uids.slice(0, 3).join(', ');
+      tooltipText += `UIDs: ${uidsToShow}`;
+      if (uids.length > 3) {
+        tooltipText += `, ... (${uids.length - 3} more)`;
+      }
+    }
+    return {
+      text: tooltipText,
+      // style: { backgroundColor: 'black', color: 'white', fontSize: '12px', padding: '5px' } // Basic inline styling for tooltip
+    };
+  };
+
   return (
-    <div style={{ position: 'relative', width: '100%', height: '500px', background: '#0A0F14', cursor: 'default' }}>
+    <div style={{ position: 'relative', width: '100%', height: mapHeight, background: '#0A0F14' }}>
       <div style={{
         position: 'absolute', top: '10px', left: '10px', color: '#A0D0F0',
         fontSize: '16px', fontFamily: 'monospace', zIndex: 1,
@@ -158,10 +196,14 @@ const GlobalNetworkMap = ({ locations }) => {
 
       <DeckGL
         initialViewState={INITIAL_VIEW_STATE}
-        controller={false} // Controller set to false, map is static
+        // Only enable specific controller interactions if needed. For tooltips, Deck.gl handles mouse events.
+        // If the map should be static (no pan/zoom by user), this is fine.
+        // For hover to work, DeckGL needs to process pointer events.
+        // controller={true} // Full control
+        controller={{dragPan: false, dragRotate: false, scrollZoom: false, touchZoom: false, touchRotate: false, doubleClickZoom: false, keyboard: false}} // Keep map static but allow pointer events for hover
         layers={layers}
-        style={{ cursor: 'default' }}
-        // getTooltip={false} // Uncomment if you want to completely disable default Deck.gl tooltips
+        getTooltip={getTooltipContent} // Use the function to generate tooltip content
+        pickingRadius={5} // How close the pointer needs to be to an object to be considered a hover
       >
         <BaseMap
           mapLib={maplibregl}
@@ -183,4 +225,4 @@ const GlobalNetworkMap = ({ locations }) => {
   );
 };
 
-export default GlobalNetworkMap;
+export default React.memo(GlobalNetworkMap); // Memoize the component
