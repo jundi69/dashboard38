@@ -844,51 +844,125 @@ export default function App() {
                       <LineChart margin={{ top: 5, right: 30, left: 20, bottom: 5 }}> {/* Added left margin for Y-axis labels */}
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis
-                          dataKey="time" // Or "inner_step" if that's the primary comparison axis
-                          type="category" // Good for time-based data that might have gaps or irregular intervals
+                          dataKey="inner_step" // Or "inner_step" if that's the primary comparison axis
+                          type="number" // Good for time-based data that might have gaps or irregular intervals
                           allowDuplicatedCategory={false}
-                          tickFormatter={(timeStr) => { try { return new Date(timeStr).toLocaleTimeString(); } catch (e) { return timeStr; } }}
+                          // tickFormatter={(timeStr) => { try { return new Date(timeStr).toLocaleTimeString(); } catch (e) { return timeStr; } }}
                           domain={['dataMin', 'dataMax']} // Helps Recharts determine overall domain
                           // scale="time" // Use if data is actual Date objects; for ISO strings, category with domain works
                         />
                         <YAxis />
                         <Tooltip
-                          labelFormatter={(label) => { try { return new Date(label).toLocaleString(); } catch (e) { return label; } }}
-                          formatter={(value, name, props) => [
-                              (typeof value === 'number' ? value.toFixed(4) : value), 
-                              `Loss (${props.payload.minerUidShort || name.split(' ')[1] || 'Miner'})`
-                          ]}
-                        />
-                        <Legend />
-                        {selectedMiners.map((uid, index) => {
-                          const data = minerData[uid]?.training?.loss;
-                          if (data && data.length > 0) {
-                            const augmentedData = data.map(p => ({ ...p, minerUidShort: `Miner ${uid}` }));
-                            return (
-                              <Line
-                                key={`loss-${uid}`}
-                                type="monotone"
-                                data={augmentedData}
-                                dataKey="value"
-                                name={`Miner ${uid} Loss`}
-                                stroke={MINER_COLORS[index % MINER_COLORS.length]}
-                                strokeWidth={1.5}
-                                dot={false}
-                                activeDot={{ r: 5 }}
-                                connectNulls={true} // Good for comparison if some miners have missing data points
-                              />
-                            );
+                          labelFormatter={(label, payload) => { // label here is inner_step
+                          if (payload && payload.length > 0 && payload[0].payload) {
+                            const point = payload[0].payload;
+                            return `Step: ${label}${point.epoch !== undefined ? `, Epoch: ${point.epoch}` : ''}${point.time ? ` (${new Date(point.time).toLocaleTimeString()})` : ''}`;
                           }
-                          return null;
-                        })}
-                      </LineChart>
-                    </ResponsiveContainer>
-                    {/* Conditional "no data" message for this specific chart */}
-                    {selectedMiners.some(uid => (!minerData[uid]?.training?.loss || minerData[uid]?.training?.loss.length === 0) && !loading.minerData[uid]) &&
-                    selectedMiners.filter(uid => minerData[uid]?.training?.loss && minerData[uid]?.training?.loss.length > 0).length === 0 && // If NO selected miners have data
-                    !selectedMiners.every(uid => loading.minerData[uid]) &&
-                    <div className="no-data" style={{ fontSize: '0.9em', marginTop: '10px' }}>No training loss data available for the selected miners.</div>
-                    }
+                          return `Step: ${label}`;
+                        }}
+                        formatter={(value, name, props) => [
+                            (typeof value === 'number' ? value.toFixed(4) : value), 
+                            `Loss (${props.payload.minerUidShort || name.split(' ')[1] || 'Miner'})`
+                        ]}
+                      />
+                      <Legend />
+                      {selectedMiners.map((uid, index) => {
+                        // Ensure minerData[uid].training.loss exists and has points
+                        // And that these points now contain 'inner_step'
+                        const lossData = minerData[uid]?.training?.loss; 
+                        if (lossData && lossData.length > 0) {
+                          // Optional: filter out points without inner_step if some are mixed
+                          const validLossData = lossData.filter(p => typeof p.inner_step === 'number');
+                          if (validLossData.length === 0) return null;
+
+                          const augmentedData = validLossData.map(p => ({ ...p, minerUidShort: `Miner ${uid}` }));
+                          return (
+                            <Line
+                              key={`loss-${uid}`}
+                              type="monotone"
+                              data={augmentedData}
+                              dataKey="value"
+                              name={`Miner ${uid} Loss`}
+                              stroke={MINER_COLORS[index % MINER_COLORS.length]}
+                              strokeWidth={1.5}
+                              dot={false}
+                              activeDot={{ r: 5 }}
+                              connectNulls={true}
+                            />
+                          );
+                        }
+                        return null;
+                      })}
+                    </LineChart>
+                  </ResponsiveContainer>
+                  {/* ... no data message ... */}
+                </div>
+
+                <div className="chart-container">
+                  <h3>Incentive Over Time Comparison</h3> {/* Title and X-axis already okay */}
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="time"
+                        type="category" // Keep as category for time strings
+                        allowDuplicatedCategory={false}
+                        tickFormatter={(timeStr) => { 
+                            try { 
+                                if (!timeStr) return ''; // Handle undefined/null timeStr
+                                return new Date(timeStr).toLocaleTimeString(); 
+                            } catch (e) { return timeStr; } 
+                        }}
+                        domain={['dataMin', 'dataMax']}
+                      />
+                      <YAxis yAxisId="left" domain={['auto', 'auto']} tickFormatter={(value) => (typeof value === 'number' ? value.toFixed(5) : value)} />
+                      <Tooltip
+                        labelFormatter={(label) => { 
+                            try { 
+                                if (!label) return ''; // Handle undefined/null label
+                                return new Date(label).toLocaleString(); 
+                            } catch (e) { return label; } 
+                        }}
+                        formatter={(value, name, props) => [
+                            (typeof value === 'number' ? value.toFixed(5) : value), 
+                            `Incentive (${props.payload.minerUidShort || name.split(' ')[1] || 'Miner'})`
+                        ]}
+                      />
+                      <Legend />
+                      {selectedMiners.map((uid, index) => {
+                        const incentiveData = minerData[uid]?.incentive_timeseries;
+                        if (incentiveData && incentiveData.length > 0) {
+                           // Filter out points with invalid time if that's the issue
+                           const validIncentiveData = incentiveData.filter(p => p.time && typeof p.time === 'string');
+                           if(validIncentiveData.length === 0) return null;
+
+                          const augmentedData = validIncentiveData.map(p => ({ ...p, minerUidShort: `Miner ${uid}` }));
+                          return (
+                            <Line
+                              key={`incentive-${uid}`}
+                              type="monotone"
+                              data={augmentedData}
+                              dataKey="value"
+                              name={`Miner ${uid} Incentive`}
+                              yAxisId="left"
+                              stroke={MINER_COLORS[(index + Math.floor(MINER_COLORS.length / 2)) % MINER_COLORS.length]}
+                              strokeWidth={1.5}
+                              dot={false}
+                              activeDot={{ r: 5 }}
+                              connectNulls={true}
+                            />
+                          );
+                        }
+                        return null;
+                      })}
+                    </LineChart>
+                  </ResponsiveContainer>
+                  {/* Conditional "no data" message for this specific chart */}
+                  {selectedMiners.some(uid => (!minerData[uid]?.training?.loss || minerData[uid]?.training?.loss.length === 0) && !loading.minerData[uid]) &&
+                  selectedMiners.filter(uid => minerData[uid]?.training?.loss && minerData[uid]?.training?.loss.length > 0).length === 0 && // If NO selected miners have data
+                  !selectedMiners.every(uid => loading.minerData[uid]) &&
+                  <div className="no-data" style={{ fontSize: '0.9em', marginTop: '10px' }}>No training loss data available for the selected miners.</div>
+                  }
                   </div>
 
                   <div className="chart-container">
