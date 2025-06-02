@@ -134,11 +134,6 @@ export default function App() {
     setError(prev => ({ ...prev, global: null }));
     try {
       const response = await axios.get(`${API_BASE_URL}/metrics/global`);
-      // ---- START DEBUG LOGS ----
-      console.log("API Response for /metrics/global:", response.data);
-      console.log("Raw all_miner_losses from API:", response.data.all_miner_losses);
-      console.log("Raw all_miner_perplexities from API:", response.data.all_miner_perplexities);
-      // ---- END DEBUG LOGS ----
 
       setGlobalData({
         all_miner_losses: response.data.all_miner_losses || {},
@@ -460,10 +455,7 @@ export default function App() {
                 </div>
               </div>
             </div>
-            {/* ---- START DEBUG LOGS ---- */}
-            {console.log("globalData.all_miner_losses in render:", globalData.all_miner_losses)}
-            {console.log("globalData.all_miner_perplexities in render:", globalData.all_miner_perplexities)}
-            {/* ---- END DEBUG LOGS ---- */}
+            
             {loading.global ? (
               <div className="loading" style={{ marginTop: '20px'}}>Loading global metrics...</div>
             ) : error.global ? (
@@ -486,10 +478,10 @@ export default function App() {
                           // tickFormatter={(tick) => tick.toLocaleString()} // Simple number format
                         />
                         <YAxis domain={['auto', 'auto']} /> {/* Let Y-axis auto-scale */}
-                        <Tooltip
+                        {/* <Tooltip
                           labelFormatter={stepTooltipLabelFormatter} // Use custom formatter
-                          formatter={(value) => value.toFixed(4)} // Format loss value
-                        />
+                          formatter={(value) => value.toFixed(4)} // Format loss value */}
+                        <Tooltip />
                         <Legend />
                         {Object.entries(globalData.all_miner_losses).map(([minerUid, lossData], index) => (
                           lossData && lossData.length > 0 && (
