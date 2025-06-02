@@ -480,6 +480,7 @@ export default function App() {
                         {/* <Tooltip
                           labelFormatter={stepTooltipLabelFormatter} // Use custom formatter
                           formatter={(value) => value.toFixed(4)} // Format loss value */}
+                        <Tooltip />
                         <Legend />
                         {Object.entries(globalData.all_miner_losses).map(([minerUid, lossData], index) => (
                           lossData && lossData.length > 0 && (
@@ -521,6 +522,7 @@ export default function App() {
                         {/* <Tooltip
                           labelFormatter={stepTooltipLabelFormatter}
                           formatter={(value) => value.toFixed(2)} // Format perplexity */}
+                        <Tooltip />
                         <Legend />
                         {Object.entries(globalData.all_miner_perplexities).map(([minerUid, perplexityData], index) => (
                           perplexityData && perplexityData.length > 0 && (
