@@ -520,10 +520,10 @@ export default function App() {
                           // tickFormatter={(tick) => tick.toLocaleString()}
                         />
                         <YAxis domain={['auto', 'auto']} />
-                        <Tooltip
+                        {/* <Tooltip
                           labelFormatter={stepTooltipLabelFormatter}
-                          formatter={(value) => value.toFixed(2)} // Format perplexity
-                        />
+                          formatter={(value) => value.toFixed(2)} // Format perplexity */}
+                        <Tooltip />
                         <Legend />
                         {Object.entries(globalData.all_miner_perplexities).map(([minerUid, perplexityData], index) => (
                           perplexityData && perplexityData.length > 0 && (
@@ -801,7 +801,7 @@ export default function App() {
                 {/* Status: This is correctly placed now, inside the selectedMiners.length > 0 block. */}
                 <div className="charts data-section-container"> {/* Wrapper for both charts */}
                   <div className="chart-container">
-                    <h3>Training Loss Comparison</h3>
+                    <h3>Loss</h3>
                     <ResponsiveContainer width="100%" height={300}>
                       <LineChart margin={{ top: 5, right: 30, left: 20, bottom: 5 }}> {/* Added left margin for Y-axis labels */}
                         <CartesianGrid strokeDasharray="3 3" />
@@ -854,7 +854,7 @@ export default function App() {
                   </div>
 
                   <div className="chart-container">
-                    <h3>Incentive Over Time Comparison</h3>
+                    <h3>Incentive</h3>
                     <ResponsiveContainer width="100%" height={300}>
                       <LineChart margin={{ top: 5, right: 30, left: 20, bottom: 5 }}> {/* Added left margin */}
                         <CartesianGrid strokeDasharray="3 3" />
