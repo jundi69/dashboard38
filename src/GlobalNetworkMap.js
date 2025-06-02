@@ -41,7 +41,7 @@ const Legend = () => {
 };
 
 
-const GlobalNetworkMap = ({ locations, mapHeight = '500px' }) => {
+const GlobalNetworkMap = ({ locations }) => {
   const [worldOutlines, setWorldOutlines] = useState(null);
 
   useEffect(() => {
@@ -200,22 +200,24 @@ const GlobalNetworkMap = ({ locations, mapHeight = '500px' }) => {
         // If the map should be static (no pan/zoom by user), this is fine.
         // For hover to work, DeckGL needs to process pointer events.
         // controller={true} // Full control
-        controller={{dragPan: false, dragRotate: false, scrollZoom: false, touchZoom: false, touchRotate: false, doubleClickZoom: false, keyboard: false}} // Keep map static but allow pointer events for hover
+        controller={{dragPan: true, dragRotate: true, scrollZoom: true, touchZoom: false, touchRotate: false, doubleClickZoom: true, keyboard: false}} // Keep map static but allow pointer events for hover
         layers={layers}
         getTooltip={getTooltipContent} // Use the function to generate tooltip content
         pickingRadius={5} // How close the pointer needs to be to an object to be considered a hover
+        style={{ width: '100%', height: '100%', position: 'relative' }}
+
       >
         <BaseMap
           mapLib={maplibregl}
           mapStyle={MINIMAL_DARK_STYLE}
           reuseMaps
           preventStyleDiffing={true}
-          dragPan={false}
-          dragRotate={false}
-          scrollZoom={false}
+          dragPan={true}
+          dragRotate={true}
+          scrollZoom={true}
           touchZoom={false}
           touchRotate={false}
-          doubleClickZoom={false}
+          doubleClickZoom={true}
           keyboard={false}
           attributionControl={false}
         />

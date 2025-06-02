@@ -403,11 +403,11 @@ export default function App() {
             <div className="map-and-stats-row">
               <div className="map-column">
                 {loading.locations ? (
-                  <div className="loading" style={{ textAlign: 'center', padding: '20px' }}>Loading map data...</div>
+                  <div className="loading" style={{ textAlign: 'center', padding: '20px', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading map data...</div>
                 ) : error.locations ? (
                   <div className="error-message" style={{ textAlign: 'center', padding: '20px' }}>{error.locations}</div>
                 ) : minerLocations.length > 0 ? (
-                  <GlobalNetworkMap locations={minerLocations} mapHeight="350px" />
+                  <GlobalNetworkMap locations={minerLocations} />
                 ) : (
                   <div className="no-data" style={{ textAlign: 'center', padding: '20px', height: '350px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1A202C', color: '#A0AEC0' }}>
                     No miner location data.
