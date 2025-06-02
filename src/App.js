@@ -899,34 +899,61 @@ export default function App() {
                 </div>
 
                 <div className="chart-container">
-                  <h3>Incentive Over Time Comparison</h3> {/* Title and X-axis already okay */}
+                  <h3>Incentive</h3> {/* Title and X-axis already okay */}
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis
                         dataKey="time"
                         type="category" // Keep as category for time strings
+                        interval="preserveStartEnd"
                         allowDuplicatedCategory={false}
-                        tickFormatter={(timeStr) => { 
-                            try { 
-                                if (!timeStr) return ''; // Handle undefined/null timeStr
-                                return new Date(timeStr).toLocaleTimeString(); 
-                            } catch (e) { return timeStr; } 
+                        // tickFormatter={(timeStr) => { 
+                        //     try { 
+                        //         if (!timeStr) return ''; // Handle undefined/null timeStr
+                        //         return new Date(timeStr).toLocaleTimeString(); 
+                        //     } catch (e) { return timeStr; } 
+                        // }}
+                        tickFormatter={(timeStr, index) => {
+                          console.log(`Incentive XAxis tickFormatter - Input: '${timeStr}', Type: ${typeof timeStr}, Index: ${index}`);
+                          if (!timeStr || typeof timeStr !== 'string') {
+                            // console.warn("tickFormatter: invalid timeStr input");
+                            return '';
+                          }
+                          try {
+                            const date = new Date(timeStr);
+                            if (date.toString() === "Invalid Date") {
+                              // console.error(`tickFormatter: Parsed to INVALID DATE: '${timeStr}'`);
+                              return 'Invalid'; // Make it obvious on the chart
+                            }
+                            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                          } catch (e) {
+                            // console.error(`tickFormatter: Exception for '${timeStr}':`, e);
+                            return 'Error'; // Make it obvious
+                          }
                         }}
                         domain={['dataMin', 'dataMax']}
                       />
                       <YAxis yAxisId="left" domain={['auto', 'auto']} tickFormatter={(value) => (typeof value === 'number' ? value.toFixed(5) : value)} />
                       <Tooltip
-                        labelFormatter={(label) => { 
-                            try { 
-                                if (!label) return ''; // Handle undefined/null label
-                                return new Date(label).toLocaleString(); 
-                            } catch (e) { return label; } 
+                        labelFormatter={(label) => { // label is a time string from dataKey="time"
+                          console.log(`Incentive Tooltip labelFormatter - Input: '${label}', Type: ${typeof label}`);
+                          if (!label || typeof label !== 'string') {
+                            // console.warn("labelFormatter: invalid label input");
+                            return 'Unknown Time';
+                          }
+                          try {
+                            const date = new Date(label);
+                            if (date.toString() === "Invalid Date") {
+                              // console.error(`labelFormatter: Parsed to INVALID DATE: '${label}'`);
+                              return 'Invalid Time'; // Make it obvious
+                            }
+                            return date.toLocaleString();
+                          } catch (e) {
+                            // console.error(`labelFormatter: Exception for '${label}':`, e);
+                            return 'Time Error'; // Make it obvious
+                          }
                         }}
-                        formatter={(value, name, props) => [
-                            (typeof value === 'number' ? value.toFixed(5) : value), 
-                            `Incentive (${props.payload.minerUidShort || name.split(' ')[1] || 'Miner'})`
-                        ]}
                       />
                       <Legend />
                       {selectedMiners.map((uid, index) => {
