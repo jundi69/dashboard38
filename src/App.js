@@ -1056,7 +1056,7 @@ export default function App() {
                 {allReduceOperations.length > 0 ? (
                   <div className="charts">
                     <div className="chart-container">
-                      <h3>Avg Success Rate Trend</h3>
+                      <h3>Average Success Rate</h3>
                       <ResponsiveContainer width="100%" height={300}>
                         <LineChart
                           data={allReduceOperations
@@ -1087,7 +1087,7 @@ export default function App() {
                     </div>
 
                     <div className="chart-container">
-                      <h3>Avg AllReduce Duration</h3>
+                      <h3>Average AllReduce Duration</h3>
                        <ResponsiveContainer width="100%" height={300}>
                         <LineChart
                           data={allReduceOperations
