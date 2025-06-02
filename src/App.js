@@ -506,7 +506,7 @@ export default function App() {
 
                 <div className="chart-container half-width">
                   {/* Removed Outer Step from title */}
-                  <h3>Miner Perplexity (vs Inner Step)</h3>
+                  <h3>Perplexity</h3>
                   {globalData?.all_miner_perplexities && Object.keys(globalData.all_miner_perplexities).length > 0 ? (
                     <ResponsiveContainer width="100%" height={300}>
                       <LineChart margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
@@ -521,7 +521,6 @@ export default function App() {
                         {/* <Tooltip
                           labelFormatter={stepTooltipLabelFormatter}
                           formatter={(value) => value.toFixed(2)} // Format perplexity */}
-                        <Tooltip />
                         <Legend />
                         {Object.entries(globalData.all_miner_perplexities).map(([minerUid, perplexityData], index) => (
                           perplexityData && perplexityData.length > 0 && (
@@ -535,7 +534,7 @@ export default function App() {
                               strokeWidth={1.5}
                               dot={false}
                               activeDot={{ r: 5 }}
-                              isAnimationActive={false}
+                              isAnimationActive={true}
                             />
                           )
                         ))}
