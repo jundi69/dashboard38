@@ -143,7 +143,7 @@ const GlobalNetworkMap = ({ locations }) => {
   };
 
   if (!locations || locations.length === 0) {
-    return <div className="no-data" style={{padding: "20px", textAlign: "center", display: 'flex', alignItems: 'center', justifyContent: 'center'}}>No location data input.</div>;
+    return <div className="no-data" style={{padding: "20px", textAlign: "center", height: "100%", display: 'flex', alignItems: 'center', justifyContent: 'center'}}>No location data input.</div>;
   }
   // This check is now implicitly handled by scatterplotLayer being null if aggregatedData is empty
   // if (!aggregatedData || aggregatedData.length === 0) {
@@ -185,7 +185,7 @@ const GlobalNetworkMap = ({ locations }) => {
   };
 
   return (
-    <div style={{ position: 'relative', width: '100%', background: '#0A0F14' }}>
+    <div style={{ position: 'relative', width: '100%', height: "100%", background: '#0A0F14' }}>
       <div style={{
         position: 'absolute', top: '10px', left: '10px', color: '#A0D0F0',
         fontSize: '16px', fontFamily: 'monospace', zIndex: 1,
