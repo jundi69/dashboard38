@@ -196,6 +196,13 @@ code {
   font-size: 0.98em;       /* INCREASED: Closer to main table font size */
 }
 
+.allreduce-operations .charts-section .chart-container {
+  flex-grow: 1;
+  flex-shrink: 1;
+  flex-basis: calc(50% - 10px); /* Suggests a 50/50 split minus gap */
+  min-width: 300px; /* Still important for wrapping on very small screens */
+}
+
 .allreduce-operations .validator-details-table th,
 .allreduce-operations .validator-details-table td {
   padding: 12px 15px;    /* INCREASED: More spacious cells */

@@ -520,11 +520,19 @@ export default function App() {
                         <CartesianGrid strokeDasharray="3 3" />
                         {/* X-axis is now inner_step */}
                         <XAxis
-                          dataKey="inner_step"
-                          type="number" // Important for numeric data
-                          domain={['dataMin', 'dataMax']} // Auto domain
-                          allowDuplicatedCategory={false} // Not needed for type="number"
-                          // tickFormatter={(tick) => tick.toLocaleString()} // Simple number format
+                          dataKey="time" // Key change: Use 'time' field from your chartData objects
+                          tickFormatter={(timestamp) => {
+                            // Format timestamp for display (e.g., "HH:mm" or "MMM DD")
+                            try {
+                              return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                              // Or for date: new Date(timestamp).toLocaleDateString();
+                            } catch (e) {
+                              return timestamp; // Fallback
+                            }
+                          }}
+                          // type="number" // If timestamps are converted to UNIX ms
+                          // domain={['dataMin', 'dataMax']} // Usually fine for time
+                          // Ensure other necessary props like stroke, tickLine, etc., are preserved.
                         />
                         <YAxis domain={['auto', 'auto']} /> {/* Let Y-axis auto-scale */}
                         {/* <Tooltip
@@ -563,10 +571,19 @@ export default function App() {
                       <LineChart margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis
-                          dataKey="inner_step"
-                          type="number"
-                          domain={['dataMin', 'dataMax']}
-                          // tickFormatter={(tick) => tick.toLocaleString()}
+                          dataKey="time" // Key change: Use 'time' field from your chartData objects
+                          tickFormatter={(timestamp) => {
+                            // Format timestamp for display (e.g., "HH:mm" or "MMM DD")
+                            try {
+                              return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                              // Or for date: new Date(timestamp).toLocaleDateString();
+                            } catch (e) {
+                              return timestamp; // Fallback
+                            }
+                          }}
+                          // type="number" // If timestamps are converted to UNIX ms
+                          // domain={['dataMin', 'dataMax']} // Usually fine for time
+                          // Ensure other necessary props like stroke, tickLine, etc., are preserved.
                         />
                         <YAxis domain={['auto', 'auto']} />
                         {/* <Tooltip
