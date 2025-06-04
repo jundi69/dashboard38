@@ -110,155 +110,121 @@ code {
   /* No specific width constraints here, let content flow */
 }
 
-/* Container for the Operations Log Table & Title */
-.allreduce-operations .operations-log-section {
-  background-color: #0f0f0f; /* Consistent with other data sections */
-  padding: 20px 25px;      /* Generous padding */
-  border-radius: 8px;
-  border: 1px solid #2a2a2a; 
-  margin-bottom: 30px;     /* Space before charts or next section */
-  /* By default, as a block element, it will take available width */
-}
-
-.allreduce-operations .operations-log-section h3 { /* "Operations Log" Title */
-  color: #f0f0f0;
-  font-size: 1.5em;        /* Prominent title */
-  margin-top: 0; 
-  margin-bottom: 20px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #333333;
-  text-align: left;        /* Align title to the left */
-}
-
-/* Main Operations Log Table (assuming it has .scores-table class) */
-.allreduce-operations .main-operations-table { /* Or .allreduce-operations .scores-table */
-  width: 100%; /* Ensure it spans the width of .operations-log-section */
+.allreduce-operations .main-operations-table {
+  width: 100%;
   border-collapse: collapse;
   background-color: #0f0f0f;
-  border-radius: 0; /* Radius is on the parent .operations-log-section */
-  border: none; /* Border is on the parent .operations-log-section */
-  font-size: 1em; /* Base font size for this table */
+  font-size: 1em; /* Base font size */
+  table-layout: fixed; /* Helps with consistent column widths if possible, or remove if causing issues */
 }
+
+.allreduce-operations .main-operations-table th,
+.allreduce-operations .main-operations-table td {
+  padding: 12px 15px;    /* Consistent padding */
+  text-align: left;      /* Ensure all text aligns left by default */
+  vertical-align: middle;/* Align content vertically */
+  border-bottom: 1px solid #252525; /* Row separator for data cells */
+  word-wrap: break-word; /* Allow long content to wrap if table-layout: fixed is used */
+}
+
 .allreduce-operations .main-operations-table th {
-  background-color: #1e1e1e; 
+  background-color: #1e1e1e;
   color: #e0e0e0;
   font-weight: 600;
-  padding: 12px 15px;    /* Increased padding for readability */
-  text-align: left;
-  white-space: nowrap;   /* Prevent headers from wrapping */
-  font-size: 0.95em;     /* Headers slightly smaller or same as base */
-  border-bottom: 2px solid #333; /* Stronger bottom border for headers */
+  font-size: 0.95em;
+  border-bottom-width: 2px; /* Stronger bottom border for headers */
+  border-bottom-color: #333;
+  white-space: nowrap; /* Keep headers on one line if possible */
+}
+/* Specific alignment for numeric columns if needed, e.g., "Reporting Validators" */
+.allreduce-operations .main-operations-table th:last-child,
+.allreduce-operations .main-operations-table td:last-child {
+  text-align: right; /* Example: If the last column is numeric */
+}
+/* Adjust above if your "Reporting Validators" is not the last or needs left align */
+.allreduce-operations .main-operations-table th:nth-child(1), /* Expand button column */
+.allreduce-operations .main-operations-table td:nth-child(1) {
+  width: 50px; /* Or appropriate fixed width for the +/- button */
+  text-align: center;
 }
 
-.allreduce-operations .main-operations-table td {
-  padding: 12px 15px;    /* Increased padding */
-  color: #c8c8c8;    
-  border-bottom: 1px solid #252525; /* Row separator */
-  font-size: 0.92em;     /* Data cells slightly smaller */
-  vertical-align: middle;
-}
+
 .allreduce-operations .main-operations-table tr:last-child td {
-    border-bottom: none; /* Clean look for the last data row */
+  border-bottom: none;
 }
-.allreduce-operations .main-operations-table tbody tr:hover td { /* Target td for full row highlight */
-  background-color: #1f1f22; /* Darker, distinct hover */
+.allreduce-operations .main-operations-table tbody tr:hover td {
+  background-color: #1f1f22;
 }
 
-/* Styling for the row that was clicked to expand (if it gets a specific class) */
+/* Styling for the row that was clicked to expand */
 .allreduce-operations .main-operations-table tr.expanded-row-header td {
-  background-color: #1a1d23 !important; /* Slightly different shade for the "parent" expanded row */
-  border-bottom-color: #007bff; /* Match the top border of the content below */
+  background-color: #1a1d23 !important; /* Darker bg for the 'parent' row of expanded content */
+  /* No more blue border here, rely on background and separator below */
+  border-bottom: 1px solid #303338; /* Clear separator above nested content */
 }
 
 
-/* Expanded Row Content (Validator Reports) */
+/* Expanded Row Content (Validator Reports) - REVISED HIGHLIGHT */
 .allreduce-operations .expanded-row-content td { /* The TD that HOLDS the nested details */
-  padding: 0 !important; 
-  /* Visual cue that this row is expanded and contains details */
-  border-top: 3px solid #007bff !important; /* Prominent blue separator */
-  border-bottom: 3px solid #007bff !important; /* Also at the bottom of expanded content for boxing */
-  /* Remove individual left/right borders if table is full-width and they look off */
+  padding: 0 !important;
+  /* Remove prominent blue borders */
+  border-left: none !important; /* Clean up potential side borders */
+  border-right: none !important;
+  border-top: none !important; /* The row above handles separation */
+  border-bottom: 1px solid #303338 !important; /* Separator below nested content */
 }
-/* Optional: remove side borders if the table is truly edge-to-edge in its container */
-.allreduce-operations .main-operations-table .expanded-row-content td:first-child {
-    border-left: none;
-}
-.allreduce-operations .main-operations-table .expanded-row-content td:last-child {
-    border-right: none;
-}
-
 
 .allreduce-operations .validator-details-container { /* The div inside the expanded cell */
-  padding: 25px 30px;      /* More generous padding inside expanded section */
-  background-color: #181a1f; /* A distinct dark shade for nested details */
-  /* border: 1px solid #2f323a; /* Optional subtle inner border */
+  padding: 20px 25px;      /* Good padding */
+  background-color: #14161a; /* Slightly different, darker background for the entire nested block */
 }
 
 .allreduce-operations .validator-details-container h4 { /* "Validator Reports for Operation..." */
-  color: #e8edf5;         /* Brighter for emphasis */
-  font-size: 1.35em;       /* Slightly larger nested title */
+  color: #e8edf5;
+  font-size: 1.25em;       /* Readable title */
   margin-top: 0;
-  margin-bottom: 20px;     /* More space below title */
+  margin-bottom: 18px;
   text-align: left;
-  border-bottom: 1px solid #333740; /* Separator for this title */
-  padding-bottom: 12px;
+  border-bottom: 1px solid #2c2f36;
+  padding-bottom: 10px;
 }
 
-/* Nested Validator Details Table */
+/* Nested Validator Details Table - ENLARGED */
 .allreduce-operations .validator-details-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.95em;       /* Make nested table readable, not too tiny */
+  font-size: 0.98em;       /* INCREASED: Closer to main table font size */
+}
+
+.allreduce-operations .validator-details-table th,
+.allreduce-operations .validator-details-table td {
+  padding: 12px 15px;    /* INCREASED: More spacious cells */
+  text-align: left;
+  border-bottom: 1px solid #282b30; /* Subtle row separators */
+  vertical-align: middle;
 }
 
 .allreduce-operations .validator-details-table th {
-  background-color: #252830; 
+  background-color: #202328;
   color: #d8e0ea;
-  font-weight: 500; 
-  padding: 10px 15px;    /* Good padding */
-  text-align: left;
-  border-bottom: 1px solid #3a3f4a; /* Separator for headers */
+  font-weight: 500;
+  font-size: 0.95em; /* Relative to parent table's font-size */
   white-space: nowrap;
 }
 
 .allreduce-operations .validator-details-table td {
-  padding: 10px 15px;    /* Match header padding */
-  color: #b0b8c5; 
-  border-bottom: 1px solid #2c2f36; /* Row separator */
+  color: #b8c0cc;
 }
 .allreduce-operations .validator-details-table tr:last-child td {
-    border-bottom: none; /* Clean look for the last row */
+  border-bottom: none;
 }
 .allreduce-operations .validator-details-table tbody tr:hover td {
-  background-color: #22252c; /* Subtle hover for nested rows */
+  background-color: #1e2125;
 }
-
-
-/* --- Charts Section in AllReduce Operations --- */
-.allreduce-operations .charts-section {
-  display: flex;
-  flex-wrap: wrap;     /* Allow charts to wrap on smaller screens */
-  gap: 20px;           /* Space between charts */
-  margin-bottom: 30px; /* Space after the charts section */
-}
-
-.allreduce-operations .charts-section .chart-container { /* Individual chart wrapper */
-  flex: 1;               /* Each chart tries to take equal space */
-  min-width: 400px;      /* Minimum width before wrapping - adjust as needed */
-  background-color: #0f0f0f; /* Consistent chart background */
-  padding: 20px 25px;
-  border-radius: 8px;
-  border: 1px solid #2a2a2a;
-}
-
-.allreduce-operations .charts-section .chart-container h3 { /* Chart titles */
-  color: #e0e0e0;
-  font-size: 1.3em;
-  margin-top: 0;
-  margin-bottom: 20px;
-  text-align: center; /* Centered chart titles */
-  padding-bottom: 10px;
-  border-bottom: 1px solid #222; /* Subtle separator for chart title */
+/* Specific alignment for numeric columns in nested table if needed */
+.allreduce-operations .validator-details-table th.numeric-column, /* Add .numeric-column class in JSX */
+.allreduce-operations .validator-details-table td.numeric-column {
+  text-align: right;
 }
 
 /* Sub-section Titles (e.g., within Miner Explorer) */
